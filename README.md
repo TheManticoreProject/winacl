@@ -1,7 +1,6 @@
 ![](./.github/banner.png)
 
 <p align="center">
-    winacl, a cross platform Go library to work with ntSecurityDescriptor.
     <br>
     <a href="https://github.com/TheManticoreProject/winacl/actions/workflows/release.yaml" title="Build"><img alt="Build" src="https://github.com/TheManticoreProject/winacl/actions/workflows/unit_tests.yaml/badge.svg"></a>
     <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/TheManticoreProject/winacl">
