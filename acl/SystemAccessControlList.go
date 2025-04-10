@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/p0dalirius/winacl/ace"
+	"github.com/TheManticoreProject/winacl/ace"
 )
 
 // SystemAccessControlList represents a System Access Control List (SACL).

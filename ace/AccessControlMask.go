@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/p0dalirius/winacl/rights"
+	"github.com/TheManticoreProject/winacl/rights"
 )
 
 // AccessControlMask represents a mask for access control entries.

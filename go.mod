@@ -1,3 +1,3 @@
-module github.com/p0dalirius/winacl
+module github.com/TheManticoreProject/winacl
 
-go 1.22.1
+go 1.24.0

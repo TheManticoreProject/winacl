@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/p0dalirius/winacl/identity"
-	"github.com/p0dalirius/winacl/object"
+	"github.com/TheManticoreProject/winacl/identity"
+	"github.com/TheManticoreProject/winacl/object"
 )
 
 // AccessControlEntry represents an entry in an access control list (ACL).

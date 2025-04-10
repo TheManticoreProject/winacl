@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/p0dalirius/winacl/ace"
+	"github.com/TheManticoreProject/winacl/ace"
 )
 
 // DiscretionaryAccessControlList represents a Discretionary Access Control List (DACL).

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/p0dalirius/winacl/rights"
-	"github.com/p0dalirius/winacl/schema"
+	"github.com/TheManticoreProject/winacl/rights"
+	"github.com/TheManticoreProject/winacl/schema"
 )
 
 const (

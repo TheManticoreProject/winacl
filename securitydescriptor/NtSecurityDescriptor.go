@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/p0dalirius/winacl/acl"
-	"github.com/p0dalirius/winacl/identity"
+	"github.com/TheManticoreProject/winacl/acl"
+	"github.com/TheManticoreProject/winacl/identity"
 )
 
 // NtSecurityDescriptor represents a Windows security descriptor.

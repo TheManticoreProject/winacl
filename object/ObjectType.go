@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/p0dalirius/winacl/guid"
+	"github.com/TheManticoreProject/winacl/guid"
 )
 
 // ObjectType represents a type of object with an associated GUID.

@@ -1,7 +1,6 @@
 ![](./.github/banner.png)
 
 <p align="center">
-    <br>
     <a href="https://github.com/TheManticoreProject/winacl/actions/workflows/release.yaml" title="Build"><img alt="Build" src="https://github.com/TheManticoreProject/winacl/actions/workflows/unit_tests.yaml/badge.svg"></a>
     <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/TheManticoreProject/winacl">
     <img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/TheManticoreProject/winacl">
@@ -36,3 +35,6 @@
 
 Pull requests are welcome. Feel free to open an issue if you want to add other features.
   
+## Credits
+- [@p0dalirius](https://github.com/p0dalirius) for the [winacl](https://github.com/p0dalirius/winacl) project.
+- [@TheManticoreProject](https://github.com/TheManticoreProject) for the [winacl](https://github.com/TheManticoreProject/winacl) project.
