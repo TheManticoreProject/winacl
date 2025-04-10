@@ -36,5 +36,5 @@
 Pull requests are welcome. Feel free to open an issue if you want to add other features.
   
 ## Credits
-- [@p0dalirius](https://github.com/p0dalirius) for the [winacl](https://github.com/p0dalirius/winacl) project.
-- [@TheManticoreProject](https://github.com/TheManticoreProject) for the [winacl](https://github.com/TheManticoreProject/winacl) project.
+  - [@p0dalirius](https://github.com/p0dalirius) for the creation of the [winacl](https://github.com/p0dalirius/winacl) library before transferring it to TheManticoreProject.
+
