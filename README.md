@@ -3,9 +3,9 @@
 <p align="center">
     winacl, a cross platform Go library to work with ntSecurityDescriptor.
     <br>
-    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/p0dalirius/winacl">
-    <a href="https://twitter.com/intent/follow?screen_name=podalirius_" title="Follow"><img src="https://img.shields.io/twitter/follow/podalirius_?label=Podalirius&style=social"></a>
-    <a href="https://www.youtube.com/c/Podalirius_?sub_confirmation=1" title="Subscribe"><img alt="YouTube Channel Subscribers" src="https://img.shields.io/youtube/channel/subscribers/UCF_x5O7CSfr82AfNVTKOv_A?style=social"></a>
+    <a href="https://github.com/TheManticoreProject/winacl/actions/workflows/release.yaml" title="Build"><img alt="Build" src="https://github.com/TheManticoreProject/winacl/actions/workflows/unit_tests.yaml/badge.svg"></a>
+    <img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/TheManticoreProject/winacl">
+    <img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/TheManticoreProject/winacl">
     <br>
 </p>
 
