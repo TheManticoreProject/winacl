@@ -35,7 +35,7 @@ func (aco *AccessControlObjectType) Unmarshal(rawBytes []byte) (int, error) {
 	rawBytes = rawBytes[rawBytesSize:]
 
 	if aco.Flags.Value != ACCESS_CONTROL_OBJECT_TYPE_FLAG_NONE {
-		// Parse OBJECT_TYPE
+		// Unmarshal OBJECT_TYPE
 		if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
 			rawBytesSize, err = aco.ObjectType.Unmarshal(rawBytes)
 			if err != nil {
@@ -45,7 +45,7 @@ func (aco *AccessControlObjectType) Unmarshal(rawBytes []byte) (int, error) {
 			rawBytes = rawBytes[rawBytesSize:]
 		}
 
-		// Parse INHERITED_OBJECT_TYPE
+		// Unmarshal INHERITED_OBJECT_TYPE
 		if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
 			rawBytesSize, err = aco.InheritedObjectType.Unmarshal(rawBytes)
 			if err != nil {
