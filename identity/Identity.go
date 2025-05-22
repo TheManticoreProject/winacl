@@ -27,10 +27,14 @@ type Identity struct {
 //
 // Parameters:
 //   - RawBytes ([]byte): The raw byte data containing the SID information.
-func (identity *Identity) Parse(rawBytes []byte) {
-	identity.RawBytes = rawBytes
+func (identity *Identity) Unmarshal(marshalledData []byte) (int, error) {
+	identity.RawBytes = marshalledData
 
-	identity.SID.FromBytes(rawBytes)
+	rawBytesSize, err := identity.SID.Unmarshal(marshalledData)
+	if err != nil {
+		return 0, err
+	}
+	identity.RawBytesSize += uint32(rawBytesSize)
 
 	sidString := identity.SID.ToString()
 	if name, exists := WellKnownSIDs[sidString]; exists {
@@ -38,14 +42,24 @@ func (identity *Identity) Parse(rawBytes []byte) {
 	}
 
 	identity.RawBytesSize = identity.SID.RawBytesSize
+
+	return int(identity.RawBytesSize), nil
 }
 
 // ToBytes serializes the Identity struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the Identity.
-func (identity *Identity) ToBytes() []byte {
-	return identity.SID.ToBytes()
+func (identity *Identity) Marshal() ([]byte, error) {
+	marshalledData := []byte{}
+
+	bytesStream, err := identity.SID.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	marshalledData = append(marshalledData, bytesStream...)
+
+	return marshalledData, nil
 }
 
 // Describe prints a detailed description of the Identity struct, including its SID and name,

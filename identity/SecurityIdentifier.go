@@ -2,7 +2,6 @@ package identity
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -217,6 +216,7 @@ type SID struct {
 	SubAuthorities      []uint32
 	RelativeIdentifier  uint32
 	Reserved            []byte
+
 	// Internal
 	RawBytes     []byte
 	RawBytesSize uint32
@@ -253,51 +253,39 @@ func (sid *SID) LookupName() string {
 // Parameters:
 //   - RawBytes ([]byte): A byte slice containing the binary representation of the SID.
 //     The slice must be at least of sufficient length to contain all SID components.
-func (sid *SID) FromBytes(rawBytes []byte) {
-	debug := false
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.FromBytes()] rawBytes: %s\n", hex.EncodeToString(rawBytes))
-	}
-
+func (sid *SID) Unmarshal(marshalledData []byte) (int, error) {
+	// Init all the fields
 	sid.RevisionLevel = 0
 	sid.SubAuthorityCount = 0
 	sid.IdentifierAuthority = SecurityIdentifierAuthority{Value: 0}
 	sid.SubAuthorities = make([]uint32, 0)
 	sid.RelativeIdentifier = 0
 	sid.Reserved = make([]byte, 0)
+
 	sid.RawBytesSize = 0
 
 	// Parse the RevisionLevel
-	if len(rawBytes) > int(sid.RawBytesSize)+1 {
-		sid.RevisionLevel = uint8(rawBytes[0])
+	if len(marshalledData) > int(sid.RawBytesSize)+1 {
+		sid.RevisionLevel = uint8(marshalledData[0])
 		sid.RawBytesSize += 1
-		if debug {
-			fmt.Printf("[debug][SecurityIdentifier.FromBytes()] Parsed RevisionLevel: %02x (%d)\n", sid.RevisionLevel, sid.RevisionLevel)
-		}
 	} else {
-		return
+		return 0, fmt.Errorf("not enough data to parse RevisionLevel")
 	}
 
 	// Parse the SubAuthorityCount
-	if len(rawBytes) > int(sid.RawBytesSize)+1 {
-		sid.SubAuthorityCount = uint8(rawBytes[1])
+	if len(marshalledData) > int(sid.RawBytesSize)+1 {
+		sid.SubAuthorityCount = uint8(marshalledData[1])
 		sid.RawBytesSize += 1
-		if debug {
-			fmt.Printf("[debug][SecurityIdentifier.FromBytes()] Parsed SubAuthorityCount: %02x (%d)\n", sid.SubAuthorityCount, sid.SubAuthorityCount)
-		}
 	} else {
-		return
+		return 0, fmt.Errorf("not enough data to parse SubAuthorityCount")
 	}
 
 	// Parse the IdentifierAuthority
-	if len(rawBytes) >= int(sid.RawBytesSize)+6 {
-		sid.IdentifierAuthority.FromBytes(rawBytes[2:8])
+	if len(marshalledData) >= int(sid.RawBytesSize)+6 {
+		sid.IdentifierAuthority.Unmarshal(marshalledData[2:8])
 		sid.RawBytesSize += 6
-		if debug {
-			fmt.Printf("[debug][SecurityIdentifier.FromBytes()] Parsed IdentifierAuthority: %016x (%d)\n", sid.IdentifierAuthority, sid.IdentifierAuthority)
-		}
 	} else {
-		return
+		return 0, fmt.Errorf("not enough data to parse IdentifierAuthority")
 	}
 
 	// Initialize the sub-authorities
@@ -309,33 +297,27 @@ func (sid *SID) FromBytes(rawBytes []byte) {
 
 		// Parse the real sub-authorities
 		for i := 0; i < int(sid.SubAuthorityCount-1); i++ {
-			if len(rawBytes) >= int(sid.RawBytesSize)+4 {
-				sid.SubAuthorities[i] = binary.LittleEndian.Uint32(rawBytes[sid.RawBytesSize : sid.RawBytesSize+4])
+			if len(marshalledData) >= int(sid.RawBytesSize)+4 {
+				sid.SubAuthorities[i] = binary.LittleEndian.Uint32(marshalledData[sid.RawBytesSize : sid.RawBytesSize+4])
 				sid.RawBytesSize += 4
-				if debug {
-					fmt.Printf("[debug][SecurityIdentifier.FromBytes()] | Parsed SubAuthority %d: %08x (%d)\n", i, sid.SubAuthorities[i], sid.SubAuthorities[i])
-				}
 			} else {
-				return
+				return 0, fmt.Errorf("not enough data to parse SubAuthority %d", i)
 			}
 		}
 	}
 
-	if len(rawBytes) > int(sid.RawBytesSize) {
+	if len(marshalledData) > int(sid.RawBytesSize) {
 		// Here we pad the relative identifier bytes to match the expected length of 4 bytes
-		buffer := rawBytes[sid.RawBytesSize:]
+		buffer := marshalledData[sid.RawBytesSize:]
 		if len(buffer) < 4 {
 			buffer = append(buffer, make([]byte, 4-len(buffer))...)
 		}
 		sid.RelativeIdentifier = binary.LittleEndian.Uint32(buffer)
-		if debug {
-			fmt.Printf("[debug][SecurityIdentifier.FromBytes()] Parsed RelativeIdentifier: %08x (%d)\n", sid.RelativeIdentifier, sid.RelativeIdentifier)
-		}
-	} else {
-		return
 	}
 
-	sid.RawBytes = rawBytes[:sid.RawBytesSize]
+	sid.RawBytes = marshalledData[:sid.RawBytesSize]
+
+	return int(sid.RawBytesSize), nil
 }
 
 // ToBytes converts the current SID struct into its binary representation as a byte slice,
@@ -343,33 +325,22 @@ func (sid *SID) FromBytes(rawBytes []byte) {
 //
 // Returns:
 //   - []byte: A byte slice representing the SID in binary format, constructed from its fields.
-func (sid *SID) ToBytes() []byte {
-	debug := false
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.ToBytes()] sid.ToString(): %s\n", sid.ToString())
-	}
-
+func (sid *SID) Marshal() ([]byte, error) {
 	// Create a byte slice to hold the result
-	buffer := make([]byte, 0)
+	marshalledData := make([]byte, 0)
 
 	// Add the RevisionLevel
-	buffer = append(buffer, sid.RevisionLevel)
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.ToBytes()] Added RevisionLevel, buffer: %s\n", hex.EncodeToString(buffer))
-	}
+	marshalledData = append(marshalledData, sid.RevisionLevel)
 
 	// Add the SubAuthorityCount
-	buffer = append(buffer, sid.SubAuthorityCount)
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.ToBytes()] Added SubAuthorityCount, buffer: %s\n", hex.EncodeToString(buffer))
-	}
+	marshalledData = append(marshalledData, sid.SubAuthorityCount)
 
 	// Convert and add the IdentifierAuthority (6 bytes, big-endian)
-	identifierBytes := sid.IdentifierAuthority.ToBytes()
-	buffer = append(buffer, identifierBytes...)
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.ToBytes()] Added IdentifierAuthority, buffer: %s\n", hex.EncodeToString(buffer))
+	identifierBytes, err := sid.IdentifierAuthority.Marshal()
+	if err != nil {
+		return nil, err
 	}
+	marshalledData = append(marshalledData, identifierBytes...)
 
 	// Add each sub-authority (4 bytes each, little-endian) up to the point where all remaining sub-authorities are 0
 	lastNullSubAuthorityIndex := len(sid.SubAuthorities)
@@ -383,23 +354,17 @@ func (sid *SID) ToBytes() []byte {
 	for k := range lastNullSubAuthorityIndex {
 		subAuthorityBytes := make([]byte, 4)
 		binary.LittleEndian.PutUint32(subAuthorityBytes, sid.SubAuthorities[k])
-		buffer = append(buffer, subAuthorityBytes...)
-		if debug {
-			fmt.Printf("[debug][SecurityIdentifier.ToBytes()] Added SubAuthority %d, buffer: %s\n", k, hex.EncodeToString(buffer))
-		}
+		marshalledData = append(marshalledData, subAuthorityBytes...)
 	}
 
 	if sid.RelativeIdentifier != 0 {
 		// Add the Relative Identifier (4 bytes, little-endian)
 		relativeIdentifierBytes := make([]byte, 4)
 		binary.LittleEndian.PutUint32(relativeIdentifierBytes, sid.RelativeIdentifier)
-		buffer = append(buffer, relativeIdentifierBytes...)
-		if debug {
-			fmt.Printf("[debug][SecurityIdentifier.ToBytes()] Added RelativeIdentifier, buffer: %s\n", hex.EncodeToString(buffer))
-		}
+		marshalledData = append(marshalledData, relativeIdentifierBytes...)
 	}
 
-	return buffer
+	return marshalledData, nil
 }
 
 // FromString populates the SID struct fields from a provided SID string representation.
@@ -412,11 +377,6 @@ func (sid *SID) ToBytes() []byte {
 //   - error: Returns an error if the SID string format is invalid or if any part of the string
 //     cannot be parsed correctly. Returns nil if the parsing is successful.
 func (sid *SID) FromString(sidString string) error {
-	debug := false
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.FromString()] sidString: %s\n", sidString)
-	}
-
 	// Init all the fields
 	sid.RevisionLevel = 0
 	sid.SubAuthorityCount = 0
@@ -424,14 +384,11 @@ func (sid *SID) FromString(sidString string) error {
 	sid.SubAuthorities = make([]uint32, 0)
 	sid.RelativeIdentifier = 0
 	sid.Reserved = make([]byte, 0)
+
 	sid.RawBytesSize = 0
 
 	// Split the SID string into parts using "-" as the delimiter
 	parts := strings.Split(sidString, "-")
-
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.FromString()] parts: %v\n", parts)
-	}
 
 	// Ensure the SID string starts with "S" and has at least 4 parts: "S", revision, identifier authority, sub-authorities/RID
 	if len(parts) < 4 || parts[0] != "S" {
@@ -444,9 +401,6 @@ func (sid *SID) FromString(sidString string) error {
 		return fmt.Errorf("invalid revision level in SID: %v", err)
 	}
 	sid.RevisionLevel = uint8(revision)
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.FromString()] sid.RevisionLevel: %d\n", sid.RevisionLevel)
-	}
 
 	// Parse the identifier authority (S-<Revision>-<IdentifierAuthority>)
 	identifierAuthority, err := strconv.ParseUint(parts[2], 10, 64)
@@ -454,9 +408,6 @@ func (sid *SID) FromString(sidString string) error {
 		return fmt.Errorf("invalid identifier authority in SID: %v", err)
 	}
 	sid.IdentifierAuthority.Value = identifierAuthority
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.FromString()] sid.IdentifierAuthority: %d\n", sid.IdentifierAuthority.Value)
-	}
 
 	// The rest are sub-authorities including the Relative Identifier (RID)
 	subAuthorities := make([]uint32, 0)
@@ -466,9 +417,6 @@ func (sid *SID) FromString(sidString string) error {
 			return fmt.Errorf("invalid sub-authority in SID: %v", err)
 		}
 		subAuthorities = append(subAuthorities, uint32(subAuthority))
-	}
-	if debug {
-		fmt.Printf("[debug][SecurityIdentifier.FromString()] subAuthorities: %v\n", subAuthorities)
 	}
 
 	sid.RelativeIdentifier = 0
@@ -508,6 +456,11 @@ func (sid *SID) ToString() string {
 	sidstring += fmt.Sprintf("-%d", sid.RelativeIdentifier)
 
 	return sidstring
+}
+
+// String returns the string representation of the SID.
+func (sid *SID) String() string {
+	return sid.ToString()
 }
 
 // Describe prints a detailed description of the SID struct, including its various fields,
