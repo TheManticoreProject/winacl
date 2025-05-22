@@ -15,9 +15,15 @@ func TestAccessControlObjectType_Involution(t *testing.T) {
 	}
 
 	var aco AccessControlObjectType
-	aco.Parse(rawBytes)
+	_, err = aco.Unmarshal(rawBytes)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal AccessControlObjectType: %v", err)
+	}
 
-	serializedBytes := aco.ToBytes()
+	serializedBytes, err := aco.Marshal()
+	if err != nil {
+		t.Fatalf("Failed to marshal AccessControlObjectType: %v", err)
+	}
 
 	if !bytes.Equal(rawBytes, serializedBytes) {
 		hexData2 := hex.EncodeToString(serializedBytes)

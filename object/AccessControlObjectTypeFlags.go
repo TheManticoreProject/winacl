@@ -17,26 +17,27 @@ type AccessControlObjectTypeFlags struct {
 	Value uint32
 }
 
-// Parse sets the Value of the AccessControlObjectTypeFlags and looks up its name
+// Unmarshal sets the Value of the AccessControlObjectTypeFlags and looks up its name
 // from a predefined map of ACE types to names. If the ACE type is not found
 // in the map, it assigns the name as "?".
 //
 // Attributes:
 //   - RawBytes ([]byte): The byte slice representing the AccessControlObjectTypeFlags.
-func (acotype *AccessControlObjectTypeFlags) Parse(RawBytes []byte) {
-	acotype.Value = binary.LittleEndian.Uint32(RawBytes[0:4])
+func (acotype *AccessControlObjectTypeFlags) Unmarshal(rawBytes []byte) (int, error) {
+	acotype.Value = binary.LittleEndian.Uint32(rawBytes[0:4])
+	return 4, nil
 }
 
 // ToBytes serializes the AccessControlObjectTypeFlags struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the AccessControlObjectTypeFlags.
-func (acotype *AccessControlObjectTypeFlags) ToBytes() []byte {
+func (acotype *AccessControlObjectTypeFlags) Marshal() ([]byte, error) {
 	serializedData := make([]byte, 4)
 
 	binary.LittleEndian.PutUint32(serializedData, acotype.Value)
 
-	return serializedData
+	return serializedData, nil
 }
 
 // String returns a string representation of the AccessControlObjectTypeFlags.

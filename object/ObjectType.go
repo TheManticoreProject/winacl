@@ -25,19 +25,31 @@ type ObjectType struct {
 	RawBytesSize uint32
 }
 
-// Parse initializes the ObjectType from the given raw byte slice.
+// Unmarshal initializes the ObjectType from the given raw byte slice.
 // It expects the RawBytes to be at least 16 bytes long, as that is the size needed to store the GUID.
 // It also sets the RawBytes and RawBytesSize fields.
-func (objType *ObjectType) Parse(RawBytes []byte) {
-	objType.RawBytes = RawBytes
-	objType.RawBytesSize = 16
-	objType.GUID.FromRawBytes(RawBytes)
+func (objType *ObjectType) Unmarshal(rawBytes []byte) (int, error) {
+	objType.RawBytes = rawBytes
+	objType.RawBytesSize = 0
+
+	rawBytesSize, err := objType.GUID.Unmarshal(rawBytes)
+	if err != nil {
+		return 0, err
+	}
+	objType.RawBytesSize += uint32(rawBytesSize)
+
+	return int(objType.RawBytesSize), nil
 }
 
-// ToBytes returns the raw byte representation of the ObjectType.
+// Marshal returns the raw byte representation of the ObjectType.
 // It returns the GUID as a byte slice.
-func (objType *ObjectType) ToBytes() []byte {
-	return objType.GUID.ToBytes()
+func (objType *ObjectType) Marshal() ([]byte, error) {
+	bytesStream, err := objType.GUID.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	objType.RawBytesSize += uint32(len(bytesStream))
+	return bytesStream, nil
 }
 
 // Describe prints a formatted representation of the ObjectType instance,

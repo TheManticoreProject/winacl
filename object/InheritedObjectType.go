@@ -29,20 +29,32 @@ type InheritedObjectType struct {
 	RawBytesSize uint32
 }
 
-// Parse takes a byte slice (RawBytes) as input, which represents the raw data
+// Unmarshal takes a byte slice (RawBytes) as input, which represents the raw data
 // for an InheritedObjectType instance. It populates the instance's fields,
 // specifically setting the RawBytes and RawBytesSize, and parsing the GUID
 // from the provided raw data.
-func (inheritedObjType *InheritedObjectType) Parse(RawBytes []byte) {
-	inheritedObjType.RawBytes = RawBytes
-	inheritedObjType.RawBytesSize = 16
-	inheritedObjType.GUID.FromRawBytes(RawBytes)
+func (inheritedObjType *InheritedObjectType) Unmarshal(rawBytes []byte) (int, error) {
+	inheritedObjType.RawBytes = rawBytes
+	inheritedObjType.RawBytesSize = 0
+
+	rawBytesSize, err := inheritedObjType.GUID.Unmarshal(rawBytes)
+	if err != nil {
+		return 0, err
+	}
+	inheritedObjType.RawBytesSize += uint32(rawBytesSize)
+
+	return int(inheritedObjType.RawBytesSize), nil
 }
 
 // ToBytes returns the raw byte representation of the ObjectType.
 // It returns the GUID as a byte slice.
-func (inheritedObjType *InheritedObjectType) ToBytes() []byte {
-	return inheritedObjType.GUID.ToBytes()
+func (inheritedObjType *InheritedObjectType) Marshal() ([]byte, error) {
+	bytesStream, err := inheritedObjType.GUID.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	inheritedObjType.RawBytesSize += uint32(len(bytesStream))
+	return bytesStream, nil
 }
 
 // Describe prints a formatted representation of the InheritedObjectType instance,
