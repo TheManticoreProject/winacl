@@ -70,13 +70,13 @@ var NtSecurityDescriptorControlValueToShortName = map[uint16]string{
 	NT_SECURITY_DESCRIPTOR_CONTROL_OD: "OD",
 }
 
-// FromBytes initializes the NtSecurityDescriptorControl struct by setting its RawValue
+// Unmarshal initializes the NtSecurityDescriptorControl struct by setting its RawValue
 // and extracting the individual control flags from it. It populates the Values and Flags slices
 // based on the control flags that are present in the RawValue.
 //
 // Parameters:
 //   - rawValue (uint16): The raw value to be parsed, representing the control flags as a bitmask.
-func (nsdc *NtSecurityDescriptorControl) FromBytes(rawValue []byte) {
+func (nsdc *NtSecurityDescriptorControl) Unmarshal(rawValue []byte) (int, error) {
 	nsdc.RawValue = binary.LittleEndian.Uint16(rawValue)
 	nsdc.Values = []uint16{}
 	nsdc.Flags = []string{}
@@ -87,16 +87,18 @@ func (nsdc *NtSecurityDescriptorControl) FromBytes(rawValue []byte) {
 			nsdc.Flags = append(nsdc.Flags, flagName)
 		}
 	}
+
+	return 2, nil
 }
 
-// ToBytes serializes the NtSecurityDescriptorControl struct into a byte slice.
+// Marshal serializes the NtSecurityDescriptorControl struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the security descriptor control.
-func (nsdc *NtSecurityDescriptorControl) ToBytes() []byte {
+func (nsdc *NtSecurityDescriptorControl) Marshal() ([]byte, error) {
 	serializedData := make([]byte, 2)
 	binary.LittleEndian.PutUint16(serializedData, nsdc.RawValue)
-	return serializedData
+	return serializedData, nil
 }
 
 // HasControl checks if a specific control bit is set in the RawValue.
@@ -107,4 +109,56 @@ func (nsdc *NtSecurityDescriptorControl) ToBytes() []byte {
 //   - bool: True if the specified control bit is set, false otherwise.
 func (nsdc *NtSecurityDescriptorControl) HasControl(control uint16) bool {
 	return (nsdc.RawValue & control) == control
+}
+
+// AddControl adds a specific control bit to the RawValue.
+//
+// Parameters:
+//   - control (uint16): The control flag to add (NT_SECURITY_DESCRIPTOR_CONTROL_*).
+//
+// Returns:
+//   - bool: True if the control was added, false if it was already present.
+func (nsdc *NtSecurityDescriptorControl) AddControl(control uint16) bool {
+	if nsdc.HasControl(control) {
+		return false
+	}
+
+	nsdc.RawValue |= control
+
+	// Update Values and Flags slices
+	flagName, exists := NtSecurityDescriptorControlValueToShortName[control]
+	if exists {
+		nsdc.Values = append(nsdc.Values, control)
+		nsdc.Flags = append(nsdc.Flags, flagName)
+	}
+
+	return true
+}
+
+// RemoveControl removes a specific control bit from the RawValue.
+//
+// Parameters:
+//   - control (uint16): The control flag to remove (NT_SECURITY_DESCRIPTOR_CONTROL_*).
+//
+// Returns:
+//   - bool: True if the control was removed, false if it was not present.
+func (nsdc *NtSecurityDescriptorControl) RemoveControl(control uint16) bool {
+	if !nsdc.HasControl(control) {
+		return false
+	}
+
+	nsdc.RawValue &= ^control
+
+	// Update Values and Flags slices
+	for i, value := range nsdc.Values {
+		if value == control {
+			// Remove the value from the Values slice
+			nsdc.Values = append(nsdc.Values[:i], nsdc.Values[i+1:]...)
+			// Remove the corresponding flag from the Flags slice
+			nsdc.Flags = append(nsdc.Flags[:i], nsdc.Flags[i+1:]...)
+			break
+		}
+	}
+
+	return true
 }

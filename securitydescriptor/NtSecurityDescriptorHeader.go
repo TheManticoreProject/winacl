@@ -29,12 +29,13 @@ type NtSecurityDescriptorHeader struct {
 	OffsetGroup uint32
 	OffsetSacl  uint32
 	OffsetDacl  uint32
+
 	// Internal
 	RawBytes     []byte
 	RawBytesSize uint32
 }
 
-// Parse populates the NtSecurityDescriptorHeader struct by parsing the provided raw byte slice.
+// Unmarshal populates the NtSecurityDescriptorHeader struct by parsing the provided raw byte slice.
 // It extracts the header information and validates the length of the raw bytes.
 //
 // Parameters:
@@ -42,54 +43,74 @@ type NtSecurityDescriptorHeader struct {
 //
 // Returns:
 //   - error: Returns an error if the raw bytes length is insufficient or if parsing fails.
-func (ntsd *NtSecurityDescriptorHeader) Parse(RawBytes []byte) error {
+func (ntsd *NtSecurityDescriptorHeader) Unmarshal(marshalledData []byte) (int, error) {
 	// Parsing header
-	if len(RawBytes) < 20 {
-		return fmt.Errorf("invalid raw bytes length")
+	if len(marshalledData) < 20 {
+		return 0, fmt.Errorf("invalid raw bytes length")
 	}
 
-	ntsd.RawBytes = RawBytes[:20]
-	ntsd.RawBytesSize = 20
+	ntsd.RawBytes = marshalledData[:20]
+	ntsd.RawBytesSize = 0
 
-	ntsd.Revision = RawBytes[0]
+	ntsd.Revision = marshalledData[0]
+	ntsd.RawBytesSize += 1
 
-	ntsd.Sbz1 = RawBytes[1]
+	ntsd.Sbz1 = marshalledData[1]
+	ntsd.RawBytesSize += 1
 
 	ntsd.Control = NtSecurityDescriptorControl{}
-	ntsd.Control.FromBytes(RawBytes[2:4])
+	bytesRead, err := ntsd.Control.Unmarshal(marshalledData[2:4])
+	if err != nil {
+		return 0, fmt.Errorf("failed to unmarshal Control: %w", err)
+	}
+	ntsd.RawBytesSize += uint32(bytesRead)
 
-	ntsd.OffsetOwner = binary.LittleEndian.Uint32(RawBytes[4:8])
+	ntsd.OffsetOwner = binary.LittleEndian.Uint32(marshalledData[4:8])
+	ntsd.RawBytesSize += 4
 
-	ntsd.OffsetGroup = binary.LittleEndian.Uint32(RawBytes[8:12])
+	ntsd.OffsetGroup = binary.LittleEndian.Uint32(marshalledData[8:12])
+	ntsd.RawBytesSize += 4
 
-	ntsd.OffsetSacl = binary.LittleEndian.Uint32(RawBytes[12:16])
+	ntsd.OffsetSacl = binary.LittleEndian.Uint32(marshalledData[12:16])
+	ntsd.RawBytesSize += 4
 
-	ntsd.OffsetDacl = binary.LittleEndian.Uint32(RawBytes[16:20])
+	ntsd.OffsetDacl = binary.LittleEndian.Uint32(marshalledData[16:20])
+	ntsd.RawBytesSize += 4
 
-	return nil
+	return 20, nil
 }
 
 // ToBytes serializes the NtSecurityDescriptorHeader struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the security descriptor header.
-func (ntsdh *NtSecurityDescriptorHeader) ToBytes() []byte {
+func (ntsdh *NtSecurityDescriptorHeader) Marshal() ([]byte, error) {
 	serializedData := []byte{}
 
 	serializedData = append(serializedData, ntsdh.Revision)
+
 	serializedData = append(serializedData, ntsdh.Sbz1)
-	serializedData = append(serializedData, ntsdh.Control.ToBytes()...)
+
+	bytesStream, err := ntsdh.Control.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
+
 	buffer := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetOwner)
 	serializedData = append(serializedData, buffer...)
+
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetGroup)
 	serializedData = append(serializedData, buffer...)
+
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetSacl)
 	serializedData = append(serializedData, buffer...)
+
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetDacl)
 	serializedData = append(serializedData, buffer...)
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints a detailed description of the NtSecurityDescriptorHeader struct,
