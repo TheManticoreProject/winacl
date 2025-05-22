@@ -59,22 +59,22 @@ func (aceheader *AccessControlEntryHeader) Unmarshal(marshalledData []byte) (int
 	// Parse the ACE type from the first byte
 	rawBytesSize, err := aceheader.Type.Unmarshal(marshalledData[:1])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to unmarshal Type: %w", err)
 	}
 	aceheader.RawBytesSize += uint32(rawBytesSize)
 
 	// Parse the ACE flags from the second byte
 	rawBytesSize, err = aceheader.Flags.Unmarshal(marshalledData[1:2])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to unmarshal Flags: %w", err)
 	}
 	aceheader.RawBytesSize += uint32(rawBytesSize)
 
 	// Read the size of the ACE from bytes 2 and 3
 	aceheader.Size = binary.LittleEndian.Uint16(marshalledData[2:4])
+	aceheader.RawBytesSize += 2
 
 	// Set the raw bytes size to 4 since we've read 4 bytes for the header
-	aceheader.RawBytesSize = 4
 	aceheader.RawBytes = marshalledData[:aceheader.RawBytesSize]
 
 	return int(aceheader.RawBytesSize), nil
@@ -89,13 +89,13 @@ func (aceheader *AccessControlEntryHeader) Marshal() ([]byte, error) {
 
 	bytesStream, err := aceheader.Type.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal Type: %w", err)
 	}
 	serializedData = append(serializedData, bytesStream...)
 
 	bytesStream, err = aceheader.Flags.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal Flags: %w", err)
 	}
 	serializedData = append(serializedData, bytesStream...)
 
