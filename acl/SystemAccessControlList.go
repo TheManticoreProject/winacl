@@ -35,6 +35,7 @@ func (sacl *SystemAccessControlList) Unmarshal(marshalledData []byte) (int, erro
 
 	// Parse all ACEs
 	for index := 0; index < int(sacl.Header.AceCount); index++ {
+		fmt.Printf("[sacl] Parsing ACE #%d\n", index)
 		entry := ace.AccessControlEntry{}
 		rawBytesSize, err := entry.Unmarshal(marshalledData)
 		if err != nil {

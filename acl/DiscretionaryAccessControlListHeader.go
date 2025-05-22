@@ -34,11 +34,11 @@ func (daclheader *DiscretionaryAccessControlListHeader) Unmarshal(marshalledData
 	}
 
 	daclheader.RawBytes = marshalledData[:8]
-	daclheader.RawBytesSize = 8
+	daclheader.RawBytesSize = 0
 
 	rawBytesSize, err := daclheader.Revision.Unmarshal(marshalledData[:1])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to unmarshal Revision: %w", err)
 	}
 	daclheader.RawBytesSize += uint32(rawBytesSize)
 
@@ -62,27 +62,34 @@ func (daclheader *DiscretionaryAccessControlListHeader) Unmarshal(marshalledData
 // Returns:
 //   - []byte: The serialized byte slice representing the DACL header.
 func (daclheader *DiscretionaryAccessControlListHeader) Marshal() ([]byte, error) {
-	var serializedData []byte
+	var marshalledData []byte
 
 	bytesStream, err := daclheader.Revision.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	serializedData = append(serializedData, bytesStream...)
+	marshalledData = append(marshalledData, bytesStream...)
+	daclheader.RawBytesSize += uint32(len(bytesStream))
 
-	serializedData = append(serializedData, daclheader.Sbz1)
+	marshalledData = append(marshalledData, daclheader.Sbz1)
+	daclheader.RawBytesSize += 1
 
 	buffer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(buffer, daclheader.AclSize)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
+	daclheader.RawBytesSize += 2
 
 	binary.LittleEndian.PutUint16(buffer, daclheader.AceCount)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
+	daclheader.RawBytesSize += 2
 
 	binary.LittleEndian.PutUint16(buffer, daclheader.Sbz2)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
+	daclheader.RawBytesSize += 2
 
-	return serializedData, nil
+	daclheader.RawBytes = marshalledData
+
+	return marshalledData, nil
 }
 
 // Describe prints a detailed description of the DiscretionaryAccessControlListHeader struct,

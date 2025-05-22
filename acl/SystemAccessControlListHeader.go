@@ -33,15 +33,16 @@ func (saclheader *SystemAccessControlListHeader) Unmarshal(marshalledData []byte
 	}
 
 	saclheader.RawBytes = marshalledData[:8]
-	saclheader.RawBytesSize = 8
+	saclheader.RawBytesSize = 0
 
 	rawBytesSize, err := saclheader.Revision.Unmarshal(marshalledData[:1])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to unmarshal Revision: %w", err)
 	}
 	saclheader.RawBytesSize += uint32(rawBytesSize)
 
 	saclheader.Sbz1 = marshalledData[1]
+	saclheader.RawBytesSize += 1
 
 	saclheader.AclSize = binary.LittleEndian.Uint16(marshalledData[2:4])
 	saclheader.RawBytesSize += 2
@@ -60,27 +61,32 @@ func (saclheader *SystemAccessControlListHeader) Unmarshal(marshalledData []byte
 // Returns:
 //   - []byte: The serialized byte slice representing the SACL header.
 func (saclheader *SystemAccessControlListHeader) Marshal() ([]byte, error) {
-	var serializedData []byte
+	var marshalledData []byte
 
 	bytesStream, err := saclheader.Revision.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal Revision: %w", err)
 	}
-	serializedData = append(serializedData, bytesStream...)
+	marshalledData = append(marshalledData, bytesStream...)
+	saclheader.RawBytesSize += uint32(len(bytesStream))
 
-	serializedData = append(serializedData, saclheader.Sbz1)
+	marshalledData = append(marshalledData, saclheader.Sbz1)
+	saclheader.RawBytesSize += 1
 
 	buffer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(buffer, saclheader.AclSize)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
+	saclheader.RawBytesSize += 2
 
 	binary.LittleEndian.PutUint16(buffer, saclheader.AceCount)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
+	saclheader.RawBytesSize += 2
 
 	binary.LittleEndian.PutUint16(buffer, saclheader.Sbz2)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
+	saclheader.RawBytesSize += 2
 
-	return serializedData, nil
+	return marshalledData, nil
 }
 
 // Describe prints a detailed description of the SystemAccessControlListHeader struct,

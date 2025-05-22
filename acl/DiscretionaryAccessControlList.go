@@ -31,10 +31,11 @@ func (dacl *DiscretionaryAccessControlList) Unmarshal(marshalledData []byte) (in
 		return 0, err
 	}
 	dacl.RawBytesSize += uint32(rawBytesSize)
-	marshalledData = marshalledData[dacl.RawBytesSize:]
+	marshalledData = marshalledData[rawBytesSize:]
 
 	// Parse all ACEs
 	for index := 0; index < int(dacl.Header.AceCount); index++ {
+		fmt.Printf("[dacl] Parsing ACE #%d\n", index)
 		entry := ace.AccessControlEntry{}
 		rawBytesSize, err := entry.Unmarshal(marshalledData)
 		if err != nil {
