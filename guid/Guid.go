@@ -71,7 +71,7 @@ func (guid *GUID) Equal(other *GUID) bool {
 
 // Parse functions ===================================================================
 
-// FromRawBytes parses a GUID from a raw byte array.
+// Unmarshal parses a GUID from a raw byte array.
 //
 // The function takes a byte array and assigns the values to the GUID fields.
 //
@@ -80,7 +80,8 @@ func (guid *GUID) Equal(other *GUID) bool {
 //
 // Returns:
 // - A pointer to the parsed GUID.
-func (guid *GUID) FromRawBytes(data []byte) {
+// - An error if the parsing fails.
+func (guid *GUID) Unmarshal(data []byte) (int, error) {
 	guid.A = uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16 | uint32(data[3])<<24
 
 	guid.B = uint16(data[4]) | uint16(data[5])<<8
@@ -95,6 +96,8 @@ func (guid *GUID) FromRawBytes(data []byte) {
 	guid.E = guid.E | uint64(data[13])<<16
 	guid.E = guid.E | uint64(data[14])<<8
 	guid.E = guid.E | uint64(data[15])
+
+	return 16, nil
 }
 
 // FromString parses a GUID from a string.
@@ -346,13 +349,14 @@ func FromFormatX(data string) (*GUID, error) {
 
 // Export functions ===================================================================
 
-// ToBytes returns the raw byte array representation of the GUID.
+// Marshal returns the raw byte array representation of the GUID.
 //
 // The function converts the GUID into a byte array.
 //
 // Returns:
 // - A byte array containing the raw bytes of the GUID.
-func (guid *GUID) ToBytes() []byte {
+// - An error if the marshalling fails.
+func (guid *GUID) Marshal() ([]byte, error) {
 	data := make([]byte, 0)
 	data = append(data, byte(guid.A), byte(guid.A>>8), byte(guid.A>>16), byte(guid.A>>24))
 	data = append(data, byte(guid.B), byte(guid.B>>8))
@@ -366,7 +370,7 @@ func (guid *GUID) ToBytes() []byte {
 
 	data = append(data, eBytes...)
 
-	return data
+	return data, nil
 }
 
 // ToFormatN returns the GUID in the format N: 00000000000000000000000000000000

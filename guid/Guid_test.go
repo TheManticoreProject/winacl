@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestToBytes(t *testing.T) {
+func TestMarshal(t *testing.T) {
 	guid := &GUID{A: 0x12345678, B: 0x1234, C: 0x5678, D: 0x9abc, E: 0xdef012345678}
 	expected := []byte{
 		0x78, 0x56, 0x34, 0x12,
@@ -13,7 +13,10 @@ func TestToBytes(t *testing.T) {
 		0x9a, 0xbc,
 		0xde, 0xf0, 0x12, 0x34, 0x56, 0x78,
 	}
-	result := guid.ToBytes()
+	result, err := guid.Marshal()
+	if err != nil {
+		t.Errorf("Error marshalling GUID: %s", err)
+	}
 	for i, b := range result {
 		if b != expected[i] {
 			t.Errorf("Expected byte %x at position %d, but got %x", expected[i], i, b)
@@ -23,9 +26,12 @@ func TestToBytes(t *testing.T) {
 
 func TestInvolution(t *testing.T) {
 	originalGuid := NewGUID()
-	data := originalGuid.ToBytes()
+	data, err := originalGuid.Marshal()
+	if err != nil {
+		t.Errorf("Error marshalling GUID: %s", err)
+	}
 	guid := &GUID{}
-	guid.FromRawBytes(data)
+	guid.Unmarshal(data)
 	if !guid.Equal(originalGuid) {
 		t.Errorf("GUIDs are not equal after involution. Before: %s, After: %s", originalGuid.ToFormatB(), guid.ToFormatB())
 	}
