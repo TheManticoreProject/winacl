@@ -14,18 +14,22 @@ type AccessControlListRevision struct {
 //
 // Parameters:
 //   - rawBytes ([]byte): The byte slice to parse.
-func (aclrev *AccessControlListRevision) Parse(rawBytes []byte) {
-	aclrev.Value = uint8(rawBytes[0])
+func (aclrev *AccessControlListRevision) Unmarshal(marshalledData []byte) (int, error) {
+	aclrev.Value = uint8(marshalledData[0])
+
+	return 1, nil
 }
 
-// ToBytes serializes the AccessControlListRevision struct into a byte slice.
+// Marshal serializes the AccessControlListRevision struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the ACL revision.
-func (aclrev *AccessControlListRevision) ToBytes() []byte {
+func (aclrev *AccessControlListRevision) Marshal() ([]byte, error) {
 	var serializedData []byte
+
 	serializedData = append(serializedData, aclrev.Value)
-	return serializedData
+
+	return serializedData, nil
 }
 
 // String returns the string representation of the AccessControlListRevision struct.

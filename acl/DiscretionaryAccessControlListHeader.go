@@ -13,6 +13,7 @@ type DiscretionaryAccessControlListHeader struct {
 	AclSize  uint16
 	AceCount uint16
 	Sbz2     uint16
+
 	// Internal
 	RawBytes     []byte
 	RawBytesSize uint32
@@ -26,42 +27,62 @@ type DiscretionaryAccessControlListHeader struct {
 //
 // Returns:
 //   - error: An error if parsing fails, otherwise nil.
-func (daclheader *DiscretionaryAccessControlListHeader) Parse(rawBytes []byte) error {
+func (daclheader *DiscretionaryAccessControlListHeader) Unmarshal(marshalledData []byte) (int, error) {
 	// Parsing header
-	if len(rawBytes) < 8 {
-		return fmt.Errorf("invalid raw bytes length")
+	if len(marshalledData) < 8 {
+		return 0, fmt.Errorf("invalid raw bytes length")
 	}
 
-	daclheader.RawBytes = rawBytes[:8]
+	daclheader.RawBytes = marshalledData[:8]
 	daclheader.RawBytesSize = 8
 
-	daclheader.Revision.Parse(rawBytes[:1])
-	daclheader.Sbz1 = rawBytes[1]
-	daclheader.AclSize = binary.LittleEndian.Uint16(rawBytes[2:4])
-	daclheader.AceCount = binary.LittleEndian.Uint16(rawBytes[4:6])
-	daclheader.Sbz2 = binary.LittleEndian.Uint16(rawBytes[6:8])
+	rawBytesSize, err := daclheader.Revision.Unmarshal(marshalledData[:1])
+	if err != nil {
+		return 0, err
+	}
+	daclheader.RawBytesSize += uint32(rawBytesSize)
 
-	return nil
+	daclheader.Sbz1 = marshalledData[1]
+	daclheader.RawBytesSize += 1
+
+	daclheader.AclSize = binary.LittleEndian.Uint16(marshalledData[2:4])
+	daclheader.RawBytesSize += 2
+
+	daclheader.AceCount = binary.LittleEndian.Uint16(marshalledData[4:6])
+	daclheader.RawBytesSize += 2
+
+	daclheader.Sbz2 = binary.LittleEndian.Uint16(marshalledData[6:8])
+	daclheader.RawBytesSize += 2
+
+	return int(daclheader.RawBytesSize), nil
 }
 
-// ToBytes serializes the DiscretionaryAccessControlListHeader struct into a byte slice.
+// Marshal serializes the DiscretionaryAccessControlListHeader struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the DACL header.
-func (daclheader *DiscretionaryAccessControlListHeader) ToBytes() []byte {
+func (daclheader *DiscretionaryAccessControlListHeader) Marshal() ([]byte, error) {
 	var serializedData []byte
 
-	serializedData = append(serializedData, daclheader.Revision.ToBytes()...)
+	bytesStream, err := daclheader.Revision.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
+
 	serializedData = append(serializedData, daclheader.Sbz1)
+
 	buffer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(buffer, daclheader.AclSize)
 	serializedData = append(serializedData, buffer...)
+
 	binary.LittleEndian.PutUint16(buffer, daclheader.AceCount)
 	serializedData = append(serializedData, buffer...)
+
 	binary.LittleEndian.PutUint16(buffer, daclheader.Sbz2)
 	serializedData = append(serializedData, buffer...)
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints a detailed description of the DiscretionaryAccessControlListHeader struct,

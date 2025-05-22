@@ -26,36 +26,47 @@ type SystemAccessControlListHeader struct {
 //
 // Returns:
 //   - error: An error if parsing fails, otherwise nil.
-func (saclheader *SystemAccessControlListHeader) Parse(rawBytes []byte) error {
+func (saclheader *SystemAccessControlListHeader) Unmarshal(marshalledData []byte) (int, error) {
 	// Parsing header
-	if len(rawBytes) < 8 {
-		return fmt.Errorf("invalid raw bytes length")
+	if len(marshalledData) < 8 {
+		return 0, fmt.Errorf("invalid raw bytes length")
 	}
 
-	saclheader.RawBytes = rawBytes[:8]
+	saclheader.RawBytes = marshalledData[:8]
 	saclheader.RawBytesSize = 8
 
-	saclheader.Revision.Parse(rawBytes[:1])
+	rawBytesSize, err := saclheader.Revision.Unmarshal(marshalledData[:1])
+	if err != nil {
+		return 0, err
+	}
+	saclheader.RawBytesSize += uint32(rawBytesSize)
 
-	saclheader.Sbz1 = rawBytes[1]
+	saclheader.Sbz1 = marshalledData[1]
 
-	saclheader.AclSize = binary.LittleEndian.Uint16(rawBytes[2:4])
+	saclheader.AclSize = binary.LittleEndian.Uint16(marshalledData[2:4])
+	saclheader.RawBytesSize += 2
 
-	saclheader.AceCount = binary.LittleEndian.Uint16(rawBytes[4:6])
+	saclheader.AceCount = binary.LittleEndian.Uint16(marshalledData[4:6])
+	saclheader.RawBytesSize += 2
 
-	saclheader.Sbz2 = binary.LittleEndian.Uint16(rawBytes[6:8])
+	saclheader.Sbz2 = binary.LittleEndian.Uint16(marshalledData[6:8])
+	saclheader.RawBytesSize += 2
 
-	return nil
+	return int(saclheader.RawBytesSize), nil
 }
 
-// ToBytes serializes the SystemAccessControlListHeader struct into a byte slice.
+// Marshal serializes the SystemAccessControlListHeader struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the SACL header.
-func (saclheader *SystemAccessControlListHeader) ToBytes() []byte {
+func (saclheader *SystemAccessControlListHeader) Marshal() ([]byte, error) {
 	var serializedData []byte
 
-	serializedData = append(serializedData, saclheader.Revision.ToBytes()...)
+	bytesStream, err := saclheader.Revision.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
 
 	serializedData = append(serializedData, saclheader.Sbz1)
 
@@ -69,7 +80,7 @@ func (saclheader *SystemAccessControlListHeader) ToBytes() []byte {
 	binary.LittleEndian.PutUint16(buffer, saclheader.Sbz2)
 	serializedData = append(serializedData, buffer...)
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints a detailed description of the SystemAccessControlListHeader struct,

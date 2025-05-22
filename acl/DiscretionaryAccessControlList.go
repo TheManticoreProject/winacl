@@ -11,6 +11,7 @@ import (
 type DiscretionaryAccessControlList struct {
 	Header  DiscretionaryAccessControlListHeader
 	Entries []ace.AccessControlEntry
+
 	// Internal
 	RawBytes     []byte
 	RawBytesSize uint32
@@ -21,41 +22,57 @@ type DiscretionaryAccessControlList struct {
 //
 // Parameters:
 //   - rawBytes ([]byte): The raw byte slice to be parsed.
-func (dacl *DiscretionaryAccessControlList) Parse(rawBytes []byte) {
+func (dacl *DiscretionaryAccessControlList) Unmarshal(marshalledData []byte) (int, error) {
 	dacl.RawBytesSize = 0
-	dacl.RawBytes = rawBytes
+	dacl.RawBytes = marshalledData
 
-	dacl.Header.Parse(rawBytes)
-	dacl.RawBytesSize += dacl.Header.RawBytesSize
-	rawBytes = rawBytes[dacl.RawBytesSize:]
+	rawBytesSize, err := dacl.Header.Unmarshal(marshalledData)
+	if err != nil {
+		return 0, err
+	}
+	dacl.RawBytesSize += uint32(rawBytesSize)
+	marshalledData = marshalledData[dacl.RawBytesSize:]
 
 	// Parse all ACEs
 	for index := 0; index < int(dacl.Header.AceCount); index++ {
 		entry := ace.AccessControlEntry{}
-		entry.Parse(rawBytes)
+		rawBytesSize, err := entry.Unmarshal(marshalledData)
+		if err != nil {
+			return 0, err
+		}
 		entry.Index = uint16(index + 1)
 		dacl.Entries = append(dacl.Entries, entry)
-		dacl.RawBytesSize += entry.RawBytesSize
-		rawBytes = rawBytes[entry.RawBytesSize:]
+		dacl.RawBytesSize += uint32(rawBytesSize)
+		marshalledData = marshalledData[rawBytesSize:]
 	}
 
 	dacl.RawBytes = dacl.RawBytes[:dacl.RawBytesSize]
+
+	return int(dacl.RawBytesSize), nil
 }
 
-// ToBytes serializes the DiscretionaryAccessControlList struct into a byte slice.
+// Marshal serializes the DiscretionaryAccessControlList struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the DACL.
-func (dacl *DiscretionaryAccessControlList) ToBytes() []byte {
+func (dacl *DiscretionaryAccessControlList) Marshal() ([]byte, error) {
 	var serializedData []byte
 
-	serializedData = append(serializedData, dacl.Header.ToBytes()...)
+	bytesStream, err := dacl.Header.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
 
 	for _, ace := range dacl.Entries {
-		serializedData = append(serializedData, ace.ToBytes()...)
+		bytesStream, err := ace.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		serializedData = append(serializedData, bytesStream...)
 	}
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints a detailed description of the DiscretionaryAccessControlList struct,
