@@ -46,44 +46,64 @@ type AccessControlEntryHeader struct {
 // Parameters:
 //   - rawBytes: A byte slice containing the raw data from which to parse the ACE header.
 //     It must be at least 4 bytes long to avoid index out of range errors.
-func (aceheader *AccessControlEntryHeader) Parse(rawBytes []byte) {
+func (aceheader *AccessControlEntryHeader) Unmarshal(marshalledData []byte) (int, error) {
 	// Ensure that RawBytes has sufficient length
-	if len(rawBytes) < 4 {
-		return // or handle the error appropriately (e.g., log, panic, etc.)
+	if len(marshalledData) < 4 {
+		return 0, fmt.Errorf("rawBytes is too short to contain an ACE header")
 	}
 
 	// Initialize RawBytesSize
 	aceheader.RawBytesSize = 0
-	aceheader.RawBytes = rawBytes
+	aceheader.RawBytes = marshalledData
 
 	// Parse the ACE type from the first byte
-	aceheader.Type.Parse(rawBytes[:1])
+	rawBytesSize, err := aceheader.Type.Unmarshal(marshalledData[:1])
+	if err != nil {
+		return 0, err
+	}
+	aceheader.RawBytesSize += uint32(rawBytesSize)
 
 	// Parse the ACE flags from the second byte
-	aceheader.Flags.Parse(rawBytes[1:2])
+	rawBytesSize, err = aceheader.Flags.Unmarshal(marshalledData[1:2])
+	if err != nil {
+		return 0, err
+	}
+	aceheader.RawBytesSize += uint32(rawBytesSize)
 
 	// Read the size of the ACE from bytes 2 and 3
-	aceheader.Size = binary.LittleEndian.Uint16(rawBytes[2:4])
+	aceheader.Size = binary.LittleEndian.Uint16(marshalledData[2:4])
 
 	// Set the raw bytes size to 4 since we've read 4 bytes for the header
 	aceheader.RawBytesSize = 4
-	aceheader.RawBytes = rawBytes[:aceheader.RawBytesSize]
+	aceheader.RawBytes = marshalledData[:aceheader.RawBytesSize]
+
+	return int(aceheader.RawBytesSize), nil
 }
 
 // ToBytes serializes the AccessControlEntryHeader struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the ACE header.
-func (aceheader *AccessControlEntryHeader) ToBytes() []byte {
+func (aceheader *AccessControlEntryHeader) Marshal() ([]byte, error) {
 	serializedData := make([]byte, 0)
 
-	serializedData = append(serializedData, aceheader.Type.ToBytes()...)
-	serializedData = append(serializedData, aceheader.Flags.ToBytes()...)
+	bytesStream, err := aceheader.Type.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
+
+	bytesStream, err = aceheader.Flags.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
+
 	buffer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(buffer, aceheader.Size)
 	serializedData = append(serializedData, buffer...)
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints a human-readable representation of the AccessControlEntryHeader struct.

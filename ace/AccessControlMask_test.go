@@ -11,11 +11,17 @@ func TestAccessControlMask_Involution(t *testing.T) {
 	}
 
 	// Serialize the original mask to bytes
-	serializedBytes := originalMask.ToBytes()
+	serializedBytes, err := originalMask.Marshal()
+	if err != nil {
+		t.Errorf("Failed to marshal AccessControlMask: %v", err)
+	}
 
 	// Parse the serialized bytes back into a new mask
 	var parsedMask AccessControlMask
-	parsedMask.Parse(serializedBytes)
+	_, err = parsedMask.Unmarshal(serializedBytes)
+	if err != nil {
+		t.Errorf("Failed to unmarshal AccessControlMask: %v", err)
+	}
 
 	// Check if the parsed mask matches the original mask
 	if originalMask.RawValue != parsedMask.RawValue {

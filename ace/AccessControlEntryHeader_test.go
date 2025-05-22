@@ -13,9 +13,15 @@ func TestAccessControlEntryHeader_Involution(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to decode hexData: %v", err)
 	}
-	header.Parse(rawBytes)
-	data := header.ToBytes()
-	if !bytes.Equal(data, rawBytes) {
-		t.Errorf("AccessControlEntryHeader.ToBytes() failed: Output of header.ToBytes() is not equal to input rawBytes")
+	_, err = header.Unmarshal(rawBytes)
+	if err != nil {
+		t.Errorf("Failed to unmarshal AccessControlEntryHeader: %v", err)
+	}
+	serializedBytes, err := header.Marshal()
+	if err != nil {
+		t.Errorf("Failed to marshal AccessControlEntryHeader: %v", err)
+	}
+	if !bytes.Equal(serializedBytes, rawBytes) {
+		t.Errorf("AccessControlEntryHeader.Marshal() failed: Output of header.Marshal() is not equal to input rawBytes")
 	}
 }
