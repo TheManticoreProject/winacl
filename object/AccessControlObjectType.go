@@ -16,56 +16,79 @@ type AccessControlObjectType struct {
 	RawBytesSize uint32
 }
 
-// Parse sets the Value of the AccessControlObjectType and looks up its name
-// from a predefined map of ACE types to names. If the ACE type is not found
-// in the map, it assigns the name as "?".
+// Unmarshal parses the AccessControlObjectType from a byte slice.
 //
 // Attributes:
-//   - flagValue (int): The integer value representing the access control
-//     entry type. This value is typically defined by the Windows security
-//     model and indicates the type of access control entry.
-func (aco *AccessControlObjectType) Parse(rawBytes []byte) {
+//   - rawBytes ([]byte): The byte slice to parse the AccessControlObjectType from.
+//
+// Returns:
+//   - int: The size of the parsed AccessControlObjectType in bytes.
+//   - error: An error if the parsing fails.
+func (aco *AccessControlObjectType) Unmarshal(rawBytes []byte) (int, error) {
 	aco.RawBytesSize = 0
 
-	aco.Flags.Parse(rawBytes[0:4])
-	rawBytes = rawBytes[4:]
-	aco.RawBytesSize += 4
+	rawBytesSize, err := aco.Flags.Unmarshal(rawBytes[0:4])
+	if err != nil {
+		return 0, err
+	}
+	aco.RawBytesSize += uint32(rawBytesSize)
+	rawBytes = rawBytes[rawBytesSize:]
 
 	if aco.Flags.Value != ACCESS_CONTROL_OBJECT_TYPE_FLAG_NONE {
-		// Parse OBJECT_TYPE
+		// Unmarshal OBJECT_TYPE
 		if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
-			aco.ObjectType.Parse(rawBytes)
-			aco.RawBytesSize += aco.ObjectType.RawBytesSize
-			rawBytes = rawBytes[aco.ObjectType.RawBytesSize:]
+			rawBytesSize, err = aco.ObjectType.Unmarshal(rawBytes)
+			if err != nil {
+				return 0, err
+			}
+			aco.RawBytesSize += uint32(rawBytesSize)
+			rawBytes = rawBytes[rawBytesSize:]
 		}
 
-		// Parse INHERITED_OBJECT_TYPE
+		// Unmarshal INHERITED_OBJECT_TYPE
 		if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
-			aco.InheritedObjectType.Parse(rawBytes)
-			aco.RawBytesSize += aco.InheritedObjectType.RawBytesSize
-			// rawBytes = rawBytes[aco.InheritedObjectType.RawBytesSize:]
+			rawBytesSize, err = aco.InheritedObjectType.Unmarshal(rawBytes)
+			if err != nil {
+				return 0, err
+			}
+			aco.RawBytesSize += uint32(rawBytesSize)
+			// rawBytes = rawBytes[rawBytesSize:]
 		}
 	}
+
+	return int(aco.RawBytesSize), nil
 }
 
-// ToBytes serializes the AccessControlObjectType struct into a byte slice.
+// Marshal serializes the AccessControlObjectType struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the AccessControlObjectType.
-func (aco *AccessControlObjectType) ToBytes() []byte {
+func (aco *AccessControlObjectType) Marshal() ([]byte, error) {
 	var serializedData []byte
 
-	serializedData = append(serializedData, aco.Flags.ToBytes()...)
+	bytesStream, err := aco.Flags.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
 
 	if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
-		serializedData = append(serializedData, aco.ObjectType.GUID.ToBytes()...)
+		bytesStream, err = aco.ObjectType.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		serializedData = append(serializedData, bytesStream...)
 	}
 
 	if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
-		serializedData = append(serializedData, aco.InheritedObjectType.GUID.ToBytes()...)
+		bytesStream, err = aco.InheritedObjectType.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		serializedData = append(serializedData, bytesStream...)
 	}
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints a human-readable representation of the AccessControlObjectType.

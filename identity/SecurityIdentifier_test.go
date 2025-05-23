@@ -32,8 +32,14 @@ func Test_SID_Involution(t *testing.T) {
 		}
 
 		var sid SID
-		sid.FromBytes(rawBytes)
-		serializedBytes := sid.ToBytes()
+		_, err = sid.Unmarshal(rawBytes)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal SID: %v", err)
+		}
+		serializedBytes, err := sid.Marshal()
+		if err != nil {
+			t.Fatalf("Failed to marshal SID: %v", err)
+		}
 
 		if !bytes.Equal(rawBytes, serializedBytes) {
 			fmt.Printf("hexData: %s\n", hexData)
@@ -71,32 +77,41 @@ func Test_SID_LookupName(t *testing.T) {
 	}
 }
 
-func Test_SID_ToBytes(t *testing.T) {
+func Test_SID_Marshal(t *testing.T) {
 	sid := &SID{}
 	sidString := "S-1-5-32-544"
 	sid.FromString(sidString)
 	expectedBytes, _ := hex.DecodeString("01020000000000052000000020020000")
-	actualBytes := sid.ToBytes()
+	actualBytes, err := sid.Marshal()
+	if err != nil {
+		t.Fatalf("Failed to marshal SID: %v", err)
+	}
 	if !strings.EqualFold(hex.EncodeToString(actualBytes), hex.EncodeToString(expectedBytes)) {
-		t.Errorf("ToBytes() failed: expected %x, got %x", expectedBytes, actualBytes)
+		t.Errorf("Marshal() failed: expected %x, got %x", expectedBytes, actualBytes)
 	}
 }
 
-func Test_SID_FromStringToBytes(t *testing.T) {
+func Test_SID_FromStringMarshal(t *testing.T) {
 	sid := &SID{}
 	sidString := "S-1-5-32-544"
 	sid.FromString(sidString)
 	expectedBytes, _ := hex.DecodeString("01020000000000052000000020020000")
-	actualBytes := sid.ToBytes()
+	actualBytes, err := sid.Marshal()
+	if err != nil {
+		t.Fatalf("Failed to marshal SID: %v", err)
+	}
 	if !bytes.Equal(actualBytes, expectedBytes) {
-		t.Errorf("ToBytes() failed: expected %x, got %x", expectedBytes, actualBytes)
+		t.Errorf("Marshal() failed: expected %x, got %x", expectedBytes, actualBytes)
 	}
 }
 
 func Test_SID_FromBytesToString(t *testing.T) {
 	sid := &SID{}
 	rawBytes, _ := hex.DecodeString("01020000000000052000000020020000")
-	sid.FromBytes(rawBytes)
+	_, err := sid.Unmarshal(rawBytes)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal SID: %v", err)
+	}
 	expectedString := "S-1-5-32-544"
 	actualString := sid.ToString()
 	if actualString != expectedString {
@@ -204,7 +219,7 @@ func Test_SID_InvolutionFromStringToString(t *testing.T) {
 	}
 }
 
-func Test_SID_FromStringToBytesToString(t *testing.T) {
+func Test_SID_FromStringMarshalToString(t *testing.T) {
 	values := []string{
 		"S-1-0-0",
 		"S-1-1-0",
@@ -290,18 +305,26 @@ func Test_SID_FromStringToBytesToString(t *testing.T) {
 		"S-1-16-49152",
 	}
 	for _, sidString := range values {
-		sid := &SID{}
-		sid.FromString(sidString)
+		t.Run(sidString, func(t *testing.T) {
+			sid := &SID{}
+			sid.FromString(sidString)
+			serializedBytes, err := sid.Marshal()
+			if err != nil {
+				t.Fatalf("Failed to marshal SID: %v", err)
+			}
 
-		sid2 := &SID{}
-		sid2.FromBytes(sid.ToBytes())
+			sid2 := &SID{}
+			_, err = sid2.Unmarshal(serializedBytes)
+			if err != nil {
+				t.Fatalf("Failed to unmarshal SID: %v", err)
+			}
+			actualString := sid2.ToString()
 
-		actualString := sid2.ToString()
-
-		if actualString != sidString {
-			sid2.Describe(0)
-			t.Errorf("ToString() failed: expected %s, got %s", sidString, actualString)
-		}
+			if actualString != sidString {
+				sid2.Describe(0)
+				t.Errorf("ToString() failed: expected %s, got %s", sidString, actualString)
+			}
+		})
 	}
 }
 

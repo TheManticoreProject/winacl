@@ -1,7 +1,6 @@
 package acl
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -12,59 +11,71 @@ import (
 type SystemAccessControlList struct {
 	Header  SystemAccessControlListHeader
 	Entries []ace.AccessControlEntry
+
 	// Internal
 	RawBytes     []byte
 	RawBytesSize uint32
 }
 
-// Parse initializes the SystemAccessControlList struct by parsing the raw byte slice.
+// Unmarshal parses the raw byte slice and initializes the SystemAccessControlList struct.
 // It sets the RawBytes and RawBytesSize fields, parses the header, and then parses each ACE.
 //
 // Parameters:
 //   - rawBytes ([]byte): The raw byte slice to be parsed.
-func (sacl *SystemAccessControlList) Parse(rawBytes []byte) {
-	debug := false
-
+func (sacl *SystemAccessControlList) Unmarshal(marshalledData []byte) (int, error) {
 	sacl.RawBytesSize = 0
-	sacl.RawBytes = rawBytes
+	sacl.RawBytes = marshalledData
 
-	if debug {
-		fmt.Printf("[debug][SystemAccessControlList.Parse()] rawBytes: %s\n", hex.EncodeToString(rawBytes))
+	// Unmarshal the header
+	rawBytesSize, err := sacl.Header.Unmarshal(marshalledData)
+	if err != nil {
+		return 0, err
 	}
-	sacl.Header.Parse(rawBytes)
-	sacl.RawBytesSize += sacl.Header.RawBytesSize
-	rawBytes = rawBytes[sacl.RawBytesSize:]
+	sacl.RawBytesSize += uint32(rawBytesSize)
+	marshalledData = marshalledData[rawBytesSize:]
 
-	// Parse all ACEs
+	// Unmarshal all ACEs
 	for index := 0; index < int(sacl.Header.AceCount); index++ {
-		if debug {
-			fmt.Printf("[debug][SystemAccessControlList.Parse()] Parsing ACE %d/%d: %s\n", index+1, int(sacl.Header.AceCount), hex.EncodeToString(rawBytes))
-		}
 		entry := ace.AccessControlEntry{}
-		entry.Parse(rawBytes)
+		rawBytesSize, err := entry.Unmarshal(marshalledData)
+		if err != nil {
+			return 0, err
+		}
 		entry.Index = uint16(index + 1)
 		sacl.Entries = append(sacl.Entries, entry)
-		sacl.RawBytesSize += entry.RawBytesSize
-		rawBytes = rawBytes[entry.RawBytesSize:]
+		sacl.RawBytesSize += uint32(rawBytesSize)
+		marshalledData = marshalledData[rawBytesSize:]
 	}
 
 	sacl.RawBytes = sacl.RawBytes[:sacl.RawBytesSize]
+
+	return int(sacl.RawBytesSize), nil
 }
 
-// ToBytes serializes the SystemAccessControlList struct into a byte slice.
+// Marshal serializes the SystemAccessControlList struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the SACL.
-func (sacl *SystemAccessControlList) ToBytes() []byte {
+func (sacl *SystemAccessControlList) Marshal() ([]byte, error) {
 	var serializedData []byte
 
-	serializedData = append(serializedData, sacl.Header.ToBytes()...)
+	// Marshal the header
+	bytesStream, err := sacl.Header.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	serializedData = append(serializedData, bytesStream...)
 
+	// Marshal the entries
 	for _, ace := range sacl.Entries {
-		serializedData = append(serializedData, ace.ToBytes()...)
+		bytesStream, err := ace.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		serializedData = append(serializedData, bytesStream...)
 	}
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints a detailed description of the SystemAccessControlList struct,

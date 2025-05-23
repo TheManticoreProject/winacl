@@ -17,6 +17,7 @@ type AccessControlMask struct {
 	RawValue uint32   // The raw value of the access control mask
 	Values   []uint32 // Individual flag values extracted from the mask
 	Flags    []string // Names of the flags corresponding to their values
+
 	// Internal fields
 	RawBytes     []byte // Raw byte representation of the mask
 	RawBytesSize uint32 // Size of the raw bytes
@@ -24,13 +25,13 @@ type AccessControlMask struct {
 
 // Parse populates the AccessControlMask from raw byte data.
 // It extracts the RawValue and determines the corresponding flags and their names.
-func (acm *AccessControlMask) Parse(rawBytes []byte) {
+func (acm *AccessControlMask) Unmarshal(marshalledData []byte) (int, error) {
 	// Store the raw bytes and set the size
-	acm.RawBytes = rawBytes
+	acm.RawBytes = marshalledData
 	acm.RawBytesSize = 4
 
 	// Convert raw bytes to a uint32 value using little-endian format
-	acm.RawValue = binary.LittleEndian.Uint32(rawBytes[:acm.RawBytesSize])
+	acm.RawValue = binary.LittleEndian.Uint32(marshalledData[:4])
 
 	// Prepare a list of right names and sort them for consistent ordering
 	listOfRightNames := make([]string, 0, len(rights.RightValueToRightName))
@@ -52,18 +53,20 @@ func (acm *AccessControlMask) Parse(rawBytes []byte) {
 			acm.Values = append(acm.Values, RightValue) // Add the value of the right
 		}
 	}
+
+	return 4, nil
 }
 
-// ToBytes serializes the AccessControlMask struct into a byte slice.
+// Marshal serializes the AccessControlMask struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the AccessControlMask.
-func (acm *AccessControlMask) ToBytes() []byte {
+func (acm *AccessControlMask) Marshal() ([]byte, error) {
 	serializedData := make([]byte, 4)
 
 	binary.LittleEndian.PutUint32(serializedData, acm.RawValue)
 
-	return serializedData
+	return serializedData, nil
 }
 
 // String returns a string representation of the AccessControlMask.

@@ -49,38 +49,41 @@ type SecurityIdentifierAuthority struct {
 	Value uint64
 }
 
-// Parse assigns a value and a name to the SecurityIdentifierAuthority (SIA) instance
+// Unmarshal assigns a value and a name to the SecurityIdentifierAuthority (SIA) instance
 // based on the provided integer flag value.
 //
 // Parameters:
-//   - flagValue: An integer representing the authority identifier. This value is
-//     used to look up the corresponding name in the sidAuthorityNames map.
+//   - marshalledData ([]byte): The byte slice containing the serialized data
+//     representing the SIA. This data is typically defined by the Windows
+//     model and indicates the type of access control entry.
 //
 // Behavior:
 //   - Sets the `Value` field of the SIA instance to `flagValue`.
 //   - Attempts to retrieve a corresponding name from the `sidAuthorityNames` map.
 //     If found, assigns the retrieved name to the `Name` field.
 //     If not found, assigns a default value of "?" to `Name`.
-func (sia *SecurityIdentifierAuthority) FromBytes(rawBytes []byte) {
+func (sia *SecurityIdentifierAuthority) Unmarshal(marshalledData []byte) (int, error) {
 	sia.Value = 0
-	sia.Value += uint64(binary.BigEndian.Uint16(rawBytes[0:2])) << 32
-	sia.Value += uint64(binary.BigEndian.Uint16(rawBytes[2:4])) << 16
-	sia.Value += uint64(binary.BigEndian.Uint16(rawBytes[4:6]))
+	sia.Value += uint64(binary.BigEndian.Uint16(marshalledData[0:2])) << 32
+	sia.Value += uint64(binary.BigEndian.Uint16(marshalledData[2:4])) << 16
+	sia.Value += uint64(binary.BigEndian.Uint16(marshalledData[4:6]))
+
+	return 6, nil
 }
 
-// ToBytes converts the current SecurityIdentifierAuthority struct into its binary representation as a byte slice,
+// Marshal converts the current SecurityIdentifierAuthority struct into its binary representation as a byte slice,
 // suitable for storage or transmission.
 //
 // Returns:
 //   - []byte: A byte slice representing the SecurityIdentifierAuthority in binary format, constructed from its fields.
-func (sia *SecurityIdentifierAuthority) ToBytes() []byte {
+func (sia *SecurityIdentifierAuthority) Marshal() ([]byte, error) {
 	identifierBytes := make([]byte, 6)
 
 	binary.BigEndian.PutUint16(identifierBytes[0:2], uint16(sia.Value>>32))
 	binary.BigEndian.PutUint16(identifierBytes[2:4], uint16(sia.Value>>16))
 	binary.BigEndian.PutUint16(identifierBytes[4:6], uint16(sia.Value))
 
-	return identifierBytes
+	return identifierBytes, nil
 }
 
 // String returns the name of the authority as a string.

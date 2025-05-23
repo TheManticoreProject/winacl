@@ -11,11 +11,15 @@ func TestAccessControlEntryType_Involution(t *testing.T) {
 	}
 
 	// Serialize the original type to bytes
-	serializedBytes := originalType.ToBytes()
+	bytesStream, err := originalType.Marshal()
+	if err != nil {
+		t.Errorf("Failed to marshal originalType: %v", err)
+	}
+	serializedBytes := bytesStream
 
 	// Parse the serialized bytes back into a new type
 	var parsedType AccessControlEntryType
-	parsedType.Parse(serializedBytes)
+	parsedType.Unmarshal(serializedBytes)
 
 	// Check if the parsed type matches the original type
 	if originalType.Value != parsedType.Value {

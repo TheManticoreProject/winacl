@@ -1,9 +1,7 @@
 package securitydescriptor
 
 import (
-	"encoding/hex"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/TheManticoreProject/winacl/acl"
@@ -25,76 +23,97 @@ type NtSecurityDescriptor struct {
 	RawBytesSize uint32
 }
 
-// Parse initializes the NtSecurityDescriptor struct by parsing the raw byte array.
+// Unmarshal initializes the NtSecurityDescriptor struct by parsing the raw byte array.
 //
 // Parameters:
 //   - rawBytes ([]byte): The raw byte array to be parsed.
 //
 // Returns:
 //   - error: An error if parsing fails, otherwise nil.
-func (ntsd *NtSecurityDescriptor) Parse(rawBytes []byte) error {
-	debug := false
-
-	ntsd.RawBytes = rawBytes
+func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) {
+	ntsd.RawBytes = marshalledData
 	ntsd.RawBytesSize = 0
 
-	// Parse the header
-	if debug {
-		fmt.Printf("[debug][NtSecurityDescriptor.Parse()] rawBytes: %s\n", hex.EncodeToString(ntsd.RawBytes))
+	// Unmarshal the header
+	rawBytesSize, err := ntsd.Header.Unmarshal(marshalledData)
+	if err != nil {
+		return 0, err
 	}
-	ntsd.Header.Parse(ntsd.RawBytes)
-	ntsd.RawBytesSize += ntsd.Header.RawBytesSize
+	ntsd.RawBytesSize += uint32(rawBytesSize)
 
-	// Parse Owner if present
+	// Unmarshal Owner if present
 	if ntsd.Header.OffsetOwner != 0 {
-		if debug {
-			fmt.Printf("[debug][NtSecurityDescriptor.Parse()] rawBytes[ntsd.Header.OffsetOwner:]: %s\n", hex.EncodeToString(ntsd.RawBytes[ntsd.Header.OffsetOwner:]))
+		rawBytesSize, err := ntsd.Owner.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetOwner:])
+		if err != nil {
+			return 0, fmt.Errorf("failed to unmarshal Owner: %w", err)
 		}
-		ntsd.Owner.Parse(ntsd.RawBytes[ntsd.Header.OffsetOwner:])
-		ntsd.RawBytesSize += ntsd.Owner.SID.RawBytesSize
+		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
-	// Parse Group if present
+	// Unmarshal Group if present
 	if ntsd.Header.OffsetGroup != 0 {
-		if debug {
-			fmt.Printf("[debug][NtSecurityDescriptor.Parse()] rawBytes[ntsd.Header.OffsetGroup:]: %s\n", hex.EncodeToString(ntsd.RawBytes[ntsd.Header.OffsetGroup:]))
+		rawBytesSize, err := ntsd.Group.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetGroup:])
+		if err != nil {
+			return 0, fmt.Errorf("failed to unmarshal Group: %w", err)
 		}
-		ntsd.Group.Parse(ntsd.RawBytes[ntsd.Header.OffsetGroup:])
-		ntsd.RawBytesSize += ntsd.Group.SID.RawBytesSize
+		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
-	// Parse DACL if present
+	// Unmarshal DACL if present
 	if ntsd.Header.OffsetDacl != 0 {
-		if debug {
-			fmt.Printf("[debug][NtSecurityDescriptor.Parse()] rawBytes[ntsd.Header.OffsetDacl:]: %s\n", hex.EncodeToString(ntsd.RawBytes[ntsd.Header.OffsetDacl:]))
+		rawBytesSize, err := ntsd.DACL.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetDacl:])
+		if err != nil {
+			return 0, fmt.Errorf("failed to unmarshal DACL: %w", err)
 		}
-		ntsd.DACL.Parse(ntsd.RawBytes[ntsd.Header.OffsetDacl:])
-		ntsd.RawBytesSize += ntsd.DACL.RawBytesSize
+		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
-	// Parse SACL if present
+	// Unmarshal SACL if present
 	if ntsd.Header.OffsetSacl != 0 {
-		if debug {
-			fmt.Printf("[debug][NtSecurityDescriptor.Parse()] rawBytes[ntsd.Header.OffsetSacl:]: %s\n", hex.EncodeToString(ntsd.RawBytes[ntsd.Header.OffsetSacl:]))
+		rawBytesSize, err := ntsd.SACL.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetSacl:])
+		if err != nil {
+			return 0, fmt.Errorf("failed to unmarshal SACL: %w", err)
 		}
-		ntsd.SACL.Parse(ntsd.RawBytes[ntsd.Header.OffsetSacl:])
-		ntsd.RawBytesSize += ntsd.SACL.RawBytesSize
+		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
-	return nil
+	return int(ntsd.RawBytesSize), nil
 }
 
-func (ntsd *NtSecurityDescriptor) ToBytes() []byte {
+// Marshal serializes the NtSecurityDescriptor struct into a byte slice.
+//
+// Returns:
+//   - ([]byte, error): A byte slice containing the serialized data and an error if serialization fails, otherwise nil.
+func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	// Initialize a byte slice to hold the serialized data
 	var serializedData []byte
 
-	dataSacl := ntsd.SACL.ToBytes()
+	// Marshal SACL
+	dataSacl, err := ntsd.SACL.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal SACL: %w", err)
+	}
 	offsetSacl := 20 // (0x00000014)
-	dataDacl := ntsd.DACL.ToBytes()
+
+	// Marshal DACL
+	dataDacl, err := ntsd.DACL.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal DACL: %w", err)
+	}
 	offsetDacl := offsetSacl + len(dataSacl)
-	dataOwner := ntsd.Owner.SID.ToBytes()
+
+	// Marshal Owner
+	dataOwner, err := ntsd.Owner.SID.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Owner: %w", err)
+	}
 	offsetOwner := offsetSacl + len(dataSacl) + len(dataDacl)
-	dataGroup := ntsd.Group.SID.ToBytes()
+
+	// Marshal Group
+	dataGroup, err := ntsd.Group.SID.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Group: %w", err)
+	}
 	offsetGroup := offsetSacl + len(dataSacl) + len(dataDacl) + len(dataOwner)
 
 	// Update the header and append the header bytes
@@ -102,7 +121,10 @@ func (ntsd *NtSecurityDescriptor) ToBytes() []byte {
 	ntsd.Header.OffsetGroup = uint32(offsetGroup)
 	ntsd.Header.OffsetSacl = uint32(offsetSacl)
 	ntsd.Header.OffsetDacl = uint32(offsetDacl)
-	serializedData = append(serializedData, ntsd.Header.ToBytes()...)
+	serializedData, err = ntsd.Header.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Header: %w", err)
+	}
 
 	// Append the SACL bytes if present
 	if ntsd.Header.OffsetSacl != 0 {
@@ -121,7 +143,7 @@ func (ntsd *NtSecurityDescriptor) ToBytes() []byte {
 		serializedData = append(serializedData, dataGroup...)
 	}
 
-	return serializedData
+	return serializedData, nil
 }
 
 // Describe prints the NtSecurityDescriptor in a human-readable format.
@@ -180,228 +202,4 @@ func (ntsd *NtSecurityDescriptor) Describe(indent int) {
 	}
 
 	fmt.Println(" └─")
-}
-
-// Methods ========================================================================
-
-// FindIdentitiesWithExtendedRight finds identities that have a specific extended right.
-//
-// Parameters:
-//   - extendedRightGUID (string): The GUID of the extended right to search for.
-//
-// Returns:
-//   - map[*identity.SID][]string: A map of identities to their matching extended rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithExtendedRight(extendedRightGUID string) map[*identity.SID][]string {
-	identitiesMap := make(map[*identity.SID][]string)
-
-	for _, ace := range ntsd.DACL.Entries {
-		matchingRights := make([]string, 0)
-		if strings.EqualFold(ace.AccessControlObjectType.ObjectType.GUID.ToFormatD(), extendedRightGUID) {
-			matchingRights = append(matchingRights, extendedRightGUID)
-			identitiesMap[&ace.SID.SID] = matchingRights
-		}
-	}
-
-	return identitiesMap
-}
-
-// FindIdentitiesWithAnyExtendedRight finds identities that have any of the specified extended rights.
-//
-// Parameters:
-//   - extendedRightsGUIDs ([]string): The GUIDs of the extended rights to search for.
-//
-// Returns:
-//   - map[*identity.SID][]string: A map of identities to their matching extended rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyExtendedRight(extendedRightsGUIDs []string) map[*identity.SID][]string {
-	identitiesMap := make(map[*identity.SID][]string)
-
-	if len(extendedRightsGUIDs) == 0 {
-		return identitiesMap
-	}
-
-	for _, ace := range ntsd.DACL.Entries {
-		matchingRights := make([]string, 0)
-		for _, extendedRightGUID := range extendedRightsGUIDs {
-			if strings.EqualFold(ace.AccessControlObjectType.ObjectType.GUID.ToFormatD(), extendedRightGUID) {
-				matchingRights = append(matchingRights, extendedRightGUID)
-			}
-		}
-		if len(matchingRights) != 0 {
-			identitiesMap[&ace.SID.SID] = matchingRights
-		}
-	}
-
-	return identitiesMap
-}
-
-// FindIdentitiesWithAllExtendedRights finds identities that have all of the specified extended rights.
-//
-// Parameters:
-//   - extendedRightsGUIDs ([]string): The GUIDs of the extended rights to search for.
-//
-// Returns:
-//   - map[*identity.SID][]string: A map of identities to their matching extended rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllExtendedRights(extendedRightsGUIDs []string) map[*identity.SID][]string {
-	identitiesMap := make(map[*identity.SID][]string)
-
-	if len(extendedRightsGUIDs) == 0 {
-		return identitiesMap
-	}
-
-	for _, ace := range ntsd.DACL.Entries {
-		allRightsMatched := true
-		// fmt.Printf("ACE ID %d\n", ace.Index)
-		for _, extendedRightGUID := range extendedRightsGUIDs {
-			if strings.EqualFold(ace.AccessControlObjectType.ObjectType.GUID.ToFormatD(), extendedRightGUID) {
-				// Right is present
-				allRightsMatched = allRightsMatched && true
-			} else {
-				// Right is not present, skipping this identity
-				allRightsMatched = allRightsMatched && false
-				// fmt.Printf("break\n")
-				break
-			}
-		}
-		if allRightsMatched {
-			identitiesMap[&ace.SID.SID] = extendedRightsGUIDs
-		}
-	}
-
-	return identitiesMap
-}
-
-// FindIdentitiesWithRight finds identities that have a specific access mask right.
-//
-// Parameters:
-//   - accessMaskRightValue (uint32): The access mask right value to search for.
-//
-// Returns:
-//   - map[*identity.SID][]uint32: A map of identities to their matching access mask rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithRight(accessMaskRightValue uint32) map[*identity.SID][]uint32 {
-	identitiesMap := make(map[*identity.SID][]uint32)
-
-	for _, ace := range ntsd.DACL.Entries {
-		matchingRights := make([]uint32, 0)
-		if slices.Contains(ace.Mask.Values, accessMaskRightValue) {
-			matchingRights = append(matchingRights, accessMaskRightValue)
-			identitiesMap[&ace.SID.SID] = matchingRights
-		}
-	}
-
-	return identitiesMap
-}
-
-// FindIdentitiesWithAnyRight finds identities that have any of the specified access mask rights.
-//
-// Parameters:
-//   - accessMaskRights ([]uint32): The access mask rights to search for.
-//
-// Returns:
-//   - map[*identity.SID][]uint32: A map of identities to their matching access mask rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyRight(accessMaskRights []uint32) map[*identity.SID][]uint32 {
-	identitiesMap := make(map[*identity.SID][]uint32)
-
-	if len(accessMaskRights) == 0 {
-		return identitiesMap
-	}
-
-	for _, ace := range ntsd.DACL.Entries {
-		matchingRights := make([]uint32, 0)
-		for _, accessMaskRightValue := range accessMaskRights {
-			if slices.Contains(ace.Mask.Values, accessMaskRightValue) {
-				matchingRights = append(matchingRights, accessMaskRightValue)
-			}
-		}
-		if len(matchingRights) != 0 {
-			identitiesMap[&ace.SID.SID] = matchingRights
-		}
-	}
-
-	return identitiesMap
-}
-
-// FindIdentitiesWithAllRights finds identities that have all of the specified access mask rights.
-//
-// Parameters:
-//   - accessMaskRights ([]uint32): The access mask rights to search for.
-//
-// Returns:
-//   - map[*identity.SID][]uint32: A map of identities to their matching access mask rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllRights(accessMaskRights []uint32) map[*identity.SID][]uint32 {
-	identitiesMap := make(map[*identity.SID][]uint32)
-
-	if len(accessMaskRights) == 0 {
-		return identitiesMap
-	}
-
-	for _, ace := range ntsd.DACL.Entries {
-		allRightsMatched := true
-		// fmt.Printf("ACE ID %d\n", ace.Index)
-		for _, accessMaskRightValue := range accessMaskRights {
-			if slices.Contains(ace.Mask.Values, accessMaskRightValue) {
-				// Right is present
-				allRightsMatched = allRightsMatched && true
-			} else {
-				// Right is not present, skipping this identity
-				allRightsMatched = allRightsMatched && false
-				// fmt.Printf("break\n")
-				break
-			}
-		}
-		if allRightsMatched {
-			identitiesMap[&ace.SID.SID] = accessMaskRights
-		}
-	}
-
-	return identitiesMap
-}
-
-// FindIdentitiesWithUnexpectedRights finds identities that have unexpected access mask rights.
-//
-// Parameters:
-//   - expectedRightsToIdentitiesMap (map[uint32][]string): A map of expected access mask rights to their corresponding identities.
-//
-// Returns:
-//   - map[uint32][]*identity.SID: A map of unexpected access mask rights to their corresponding identities.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedRights(expectedRightsToIdentitiesMap map[uint32][]string) map[uint32][]*identity.SID {
-	unexpectedIdentities := map[uint32][]*identity.SID{}
-
-	for specificRight, expectedIdentities := range expectedRightsToIdentitiesMap {
-
-		for id := range ntsd.FindIdentitiesWithRight(specificRight) {
-			if !slices.Contains(expectedIdentities, id.ToString()) {
-				if _, ok := unexpectedIdentities[specificRight]; !ok {
-					unexpectedIdentities[specificRight] = make([]*identity.SID, 0)
-				}
-				unexpectedIdentities[specificRight] = append(unexpectedIdentities[specificRight], id)
-			}
-		}
-	}
-
-	return unexpectedIdentities
-}
-
-// FindIdentitiesWithUnexpectedExtendedRights finds identities that have unexpected extended rights.
-//
-// Parameters:
-//   - expectedExtendedRightsToIdentitiesMap (map[string][]string): A map of expected extended rights to their corresponding identities.
-//
-// Returns:
-//   - map[string][]*identity.SID: A map of unexpected extended rights to their corresponding identities.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedExtendedRights(expectedExtendedRightsToIdentitiesMap map[string][]string) map[string][]*identity.SID {
-	unexpectedIdentities := map[string][]*identity.SID{}
-
-	for specificExtendedRightGUID, expectedIdentities := range expectedExtendedRightsToIdentitiesMap {
-
-		for id := range ntsd.FindIdentitiesWithExtendedRight(specificExtendedRightGUID) {
-			if !slices.Contains(expectedIdentities, id.ToString()) {
-				if _, ok := unexpectedIdentities[specificExtendedRightGUID]; !ok {
-					unexpectedIdentities[specificExtendedRightGUID] = make([]*identity.SID, 0)
-				}
-				unexpectedIdentities[specificExtendedRightGUID] = append(unexpectedIdentities[specificExtendedRightGUID], id)
-			}
-		}
-	}
-
-	return unexpectedIdentities
 }

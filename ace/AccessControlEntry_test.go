@@ -22,9 +22,15 @@ func TestAccessControlEntry_Involution_ACE_TYPE_ACCESS_ALLOWED(t *testing.T) {
 		}
 
 		var ace AccessControlEntry
-		ace.Parse(rawBytes)
+		_, err = ace.Unmarshal(rawBytes)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal AccessControlEntry: %v", err)
+		}
 
-		serializedBytes := ace.ToBytes()
+		serializedBytes, err := ace.Marshal()
+		if err != nil {
+			t.Fatalf("Failed to marshal AccessControlEntry: %v", err)
+		}
 
 		if !bytes.Equal(rawBytes, serializedBytes) {
 			hexData2 := hex.EncodeToString(serializedBytes)

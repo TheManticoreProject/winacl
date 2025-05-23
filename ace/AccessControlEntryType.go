@@ -66,25 +66,29 @@ var AccessControlEntryTypeValueToName = map[uint8]string{
 	ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:        "SYSTEM_SCOPED_POLICY_ID",
 }
 
-// Parse sets the Value of the AccessControlEntryType and looks up its name
-// from a predefined map of ACE types to names. If the ACE type is not found
-// in the map, it assigns the name as "?".
+// Unmarshal deserializes the AccessControlEntryType struct from a byte slice.
+//
+// Returns:
+//   - int: The number of bytes read from the input slice.
+//   - error: An error if the unmarshalling fails.
 //
 // Attributes:
-//   - flagValue (int): The integer value representing the access control
-//     entry type. This value is typically defined by the Windows security
+//   - marshalledData ([]byte): The byte slice containing the serialized data
+//     representing the ACE type. This data is typically defined by the Windows
 //     model and indicates the type of access control entry.
-func (acetype *AccessControlEntryType) Parse(rawValue []byte) {
+func (acetype *AccessControlEntryType) Unmarshal(marshalledData []byte) (int, error) {
 	// Set the value of the ACE type
-	acetype.Value = uint8(rawValue[0])
+	acetype.Value = uint8(marshalledData[0])
+
+	return 1, nil
 }
 
-// ToBytes serializes the AccessControlEntryType struct into a byte slice.
+// Marshal serializes the AccessControlEntryType struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the ACE type.
-func (acetype *AccessControlEntryType) ToBytes() []byte {
-	return []byte{acetype.Value}
+func (acetype *AccessControlEntryType) Marshal() ([]byte, error) {
+	return []byte{acetype.Value}, nil
 }
 
 // String returns the string representation of the AccessControlEntryType.
