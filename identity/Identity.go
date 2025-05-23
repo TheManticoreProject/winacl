@@ -17,12 +17,13 @@ import (
 type Identity struct {
 	Name string
 	SID  SID
+
 	// Internal
 	RawBytes     []byte
 	RawBytesSize uint32
 }
 
-// Parse populates the Identity struct by parsing the provided raw byte slice.
+// Unmarshal populates the Identity struct by parsing the provided raw byte slice.
 // It extracts the SID from the raw bytes and attempts to assign a name if the SID is well-known.
 //
 // Parameters:
@@ -46,7 +47,7 @@ func (identity *Identity) Unmarshal(marshalledData []byte) (int, error) {
 	return int(identity.RawBytesSize), nil
 }
 
-// ToBytes serializes the Identity struct into a byte slice.
+// Marshal serializes the Identity struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the Identity.

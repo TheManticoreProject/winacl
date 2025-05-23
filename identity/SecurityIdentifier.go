@@ -247,7 +247,7 @@ func (sid *SID) LookupName() string {
 	return ""
 }
 
-// FromBytes populates the SID struct fields from the provided byte slice,
+// Unmarshal populates the SID struct fields from the provided byte slice,
 // interpreting the byte data as a binary representation of a Security Identifier (SID).
 //
 // Parameters:
@@ -306,21 +306,20 @@ func (sid *SID) Unmarshal(marshalledData []byte) (int, error) {
 		}
 	}
 
-	if len(marshalledData) > int(sid.RawBytesSize) {
+	if int(sid.RawBytesSize) < len(marshalledData) {
 		// Here we pad the relative identifier bytes to match the expected length of 4 bytes
 		buffer := marshalledData[sid.RawBytesSize:]
 		if len(buffer) < 4 {
 			buffer = append(buffer, make([]byte, 4-len(buffer))...)
 		}
 		sid.RelativeIdentifier = binary.LittleEndian.Uint32(buffer)
+		sid.RawBytesSize += uint32(len(buffer))
 	}
-
-	sid.RawBytes = marshalledData[:sid.RawBytesSize]
 
 	return int(sid.RawBytesSize), nil
 }
 
-// ToBytes converts the current SID struct into its binary representation as a byte slice,
+// Marshal converts the current SID struct into its binary representation as a byte slice,
 // suitable for storage or transmission.
 //
 // Returns:
@@ -344,17 +343,18 @@ func (sid *SID) Marshal() ([]byte, error) {
 
 	// Add each sub-authority (4 bytes each, little-endian) up to the point where all remaining sub-authorities are 0
 	lastNullSubAuthorityIndex := len(sid.SubAuthorities)
-	for k := range len(sid.SubAuthorities) {
-		if sid.SubAuthorities[len(sid.SubAuthorities)-k-1] == 0 {
-			lastNullSubAuthorityIndex = len(sid.SubAuthorities) - k - 1
+	for i := len(sid.SubAuthorities) - 1; i >= 0; i-- {
+		if sid.SubAuthorities[i] != 0 {
+			lastNullSubAuthorityIndex = i + 1
+			break
 		}
 	}
 
 	// Add each sub-authority (4 bytes each, little-endian)
-	for k := range lastNullSubAuthorityIndex {
-		subAuthorityBytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(subAuthorityBytes, sid.SubAuthorities[k])
-		marshalledData = append(marshalledData, subAuthorityBytes...)
+	for k := 0; k < lastNullSubAuthorityIndex; k++ {
+		var buf [4]byte
+		binary.LittleEndian.PutUint32(buf[:], sid.SubAuthorities[k])
+		marshalledData = append(marshalledData, buf[:]...)
 	}
 
 	if sid.RelativeIdentifier != 0 {

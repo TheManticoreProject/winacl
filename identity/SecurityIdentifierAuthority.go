@@ -71,7 +71,7 @@ func (sia *SecurityIdentifierAuthority) Unmarshal(marshalledData []byte) (int, e
 	return 6, nil
 }
 
-// ToBytes converts the current SecurityIdentifierAuthority struct into its binary representation as a byte slice,
+// Marshal converts the current SecurityIdentifierAuthority struct into its binary representation as a byte slice,
 // suitable for storage or transmission.
 //
 // Returns:
