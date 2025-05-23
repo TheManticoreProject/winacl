@@ -17,7 +17,7 @@ type SystemAccessControlList struct {
 	RawBytesSize uint32
 }
 
-// Unmarshal initializes the SystemAccessControlList struct by parsing the raw byte slice.
+// Unmarshal parses the raw byte slice and initializes the SystemAccessControlList struct.
 // It sets the RawBytes and RawBytesSize fields, parses the header, and then parses each ACE.
 //
 // Parameters:
@@ -26,6 +26,7 @@ func (sacl *SystemAccessControlList) Unmarshal(marshalledData []byte) (int, erro
 	sacl.RawBytesSize = 0
 	sacl.RawBytes = marshalledData
 
+	// Unmarshal the header
 	rawBytesSize, err := sacl.Header.Unmarshal(marshalledData)
 	if err != nil {
 		return 0, err
@@ -33,9 +34,8 @@ func (sacl *SystemAccessControlList) Unmarshal(marshalledData []byte) (int, erro
 	sacl.RawBytesSize += uint32(rawBytesSize)
 	marshalledData = marshalledData[rawBytesSize:]
 
-	// Parse all ACEs
+	// Unmarshal all ACEs
 	for index := 0; index < int(sacl.Header.AceCount); index++ {
-		fmt.Printf("[sacl] Parsing ACE #%d\n", index)
 		entry := ace.AccessControlEntry{}
 		rawBytesSize, err := entry.Unmarshal(marshalledData)
 		if err != nil {
@@ -59,12 +59,14 @@ func (sacl *SystemAccessControlList) Unmarshal(marshalledData []byte) (int, erro
 func (sacl *SystemAccessControlList) Marshal() ([]byte, error) {
 	var serializedData []byte
 
+	// Marshal the header
 	bytesStream, err := sacl.Header.Marshal()
 	if err != nil {
 		return nil, err
 	}
 	serializedData = append(serializedData, bytesStream...)
 
+	// Marshal the entries
 	for _, ace := range sacl.Entries {
 		bytesStream, err := ace.Marshal()
 		if err != nil {

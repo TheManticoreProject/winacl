@@ -17,7 +17,7 @@ type DiscretionaryAccessControlList struct {
 	RawBytesSize uint32
 }
 
-// Parse initializes the DiscretionaryAccessControlList struct by parsing the raw byte slice.
+// Unmarshal parses the raw byte slice and initializes the DiscretionaryAccessControlList struct.
 // It sets the RawBytes and RawBytesSize fields, parses the header, and then parses each ACE.
 //
 // Parameters:
@@ -35,7 +35,6 @@ func (dacl *DiscretionaryAccessControlList) Unmarshal(marshalledData []byte) (in
 
 	// Parse all ACEs
 	for index := 0; index < int(dacl.Header.AceCount); index++ {
-		fmt.Printf("[dacl] Parsing ACE #%d\n", index)
 		entry := ace.AccessControlEntry{}
 		rawBytesSize, err := entry.Unmarshal(marshalledData)
 		if err != nil {
