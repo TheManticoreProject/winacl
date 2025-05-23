@@ -14,22 +14,22 @@ type NtSecurityDescriptorControl struct {
 
 // Control indexes in bit field
 const (
-	NT_SECURITY_DESCRIPTOR_CONTROL_SR uint16 = 1 << iota // Self-Relative
-	NT_SECURITY_DESCRIPTOR_CONTROL_RM                    // RM Control Valid
-	NT_SECURITY_DESCRIPTOR_CONTROL_PS                    // SACL Protected
-	NT_SECURITY_DESCRIPTOR_CONTROL_PD                    // DACL Protected
-	NT_SECURITY_DESCRIPTOR_CONTROL_SI                    // SACL Auto-Inherited
-	NT_SECURITY_DESCRIPTOR_CONTROL_DI                    // DACL Auto-Inherited
-	NT_SECURITY_DESCRIPTOR_CONTROL_SC                    // SACL Computed Inheritance Required
-	NT_SECURITY_DESCRIPTOR_CONTROL_DC                    // DACL Computed Inheritance Required
-	NT_SECURITY_DESCRIPTOR_CONTROL_SS                    // Server Security
-	NT_SECURITY_DESCRIPTOR_CONTROL_DT                    // DACL Trusted
-	NT_SECURITY_DESCRIPTOR_CONTROL_SD                    // SACL Defaulted
-	NT_SECURITY_DESCRIPTOR_CONTROL_SP                    // SACL Present
-	NT_SECURITY_DESCRIPTOR_CONTROL_DD                    // DACL Defaulted
-	NT_SECURITY_DESCRIPTOR_CONTROL_DP                    // DACL Present
-	NT_SECURITY_DESCRIPTOR_CONTROL_GD                    // Group Defaulted
-	NT_SECURITY_DESCRIPTOR_CONTROL_OD                    // Owner Defaulted
+	NT_SECURITY_DESCRIPTOR_CONTROL_SR uint16 = 0x0001 // Self-Relative
+	NT_SECURITY_DESCRIPTOR_CONTROL_RM uint16 = 0x0002 // RM Control Valid
+	NT_SECURITY_DESCRIPTOR_CONTROL_PS uint16 = 0x0004 // SACL Protected
+	NT_SECURITY_DESCRIPTOR_CONTROL_PD uint16 = 0x0008 // DACL Protected
+	NT_SECURITY_DESCRIPTOR_CONTROL_SI uint16 = 0x0010 // SACL Auto-Inherited
+	NT_SECURITY_DESCRIPTOR_CONTROL_DI uint16 = 0x0020 // DACL Auto-Inherited
+	NT_SECURITY_DESCRIPTOR_CONTROL_SC uint16 = 0x0040 // SACL Computed Inheritance Required
+	NT_SECURITY_DESCRIPTOR_CONTROL_DC uint16 = 0x0080 // DACL Computed Inheritance Required
+	NT_SECURITY_DESCRIPTOR_CONTROL_SS uint16 = 0x0100 // Server Security
+	NT_SECURITY_DESCRIPTOR_CONTROL_DT uint16 = 0x0200 // DACL Trusted
+	NT_SECURITY_DESCRIPTOR_CONTROL_SD uint16 = 0x0400 // SACL Defaulted
+	NT_SECURITY_DESCRIPTOR_CONTROL_SP uint16 = 0x0800 // SACL Present
+	NT_SECURITY_DESCRIPTOR_CONTROL_DD uint16 = 0x1000 // DACL Defaulted
+	NT_SECURITY_DESCRIPTOR_CONTROL_DP uint16 = 0x2000 // DACL Present
+	NT_SECURITY_DESCRIPTOR_CONTROL_GD uint16 = 0x4000 // Group Defaulted
+	NT_SECURITY_DESCRIPTOR_CONTROL_OD uint16 = 0x8000 // Owner Defaulted
 )
 
 // Control flag map from value to string representation
@@ -101,66 +101,4 @@ func (nsdc *NtSecurityDescriptorControl) Marshal() ([]byte, error) {
 	serializedData := make([]byte, 2)
 	binary.LittleEndian.PutUint16(serializedData, nsdc.RawValue)
 	return serializedData, nil
-}
-
-// HasControl checks if a specific control bit is set in the RawValue.
-// Parameters:
-//   - control (uint16): The control flag to check (NT_SECURITY_DESCRIPTOR_CONTROL_*).
-//
-// Returns:
-//   - bool: True if the specified control bit is set, false otherwise.
-func (nsdc *NtSecurityDescriptorControl) HasControl(control uint16) bool {
-	return (nsdc.RawValue & control) == control
-}
-
-// AddControl adds a specific control bit to the RawValue.
-//
-// Parameters:
-//   - control (uint16): The control flag to add (NT_SECURITY_DESCRIPTOR_CONTROL_*).
-//
-// Returns:
-//   - bool: True if the control was added, false if it was already present.
-func (nsdc *NtSecurityDescriptorControl) AddControl(control uint16) bool {
-	if nsdc.HasControl(control) {
-		return false
-	}
-
-	nsdc.RawValue |= control
-
-	// Update Values and Flags slices
-	flagName, exists := NtSecurityDescriptorControlValueToShortName[control]
-	if exists {
-		nsdc.Values = append(nsdc.Values, control)
-		nsdc.Flags = append(nsdc.Flags, flagName)
-	}
-
-	return true
-}
-
-// RemoveControl removes a specific control bit from the RawValue.
-//
-// Parameters:
-//   - control (uint16): The control flag to remove (NT_SECURITY_DESCRIPTOR_CONTROL_*).
-//
-// Returns:
-//   - bool: True if the control was removed, false if it was not present.
-func (nsdc *NtSecurityDescriptorControl) RemoveControl(control uint16) bool {
-	if !nsdc.HasControl(control) {
-		return false
-	}
-
-	nsdc.RawValue &= ^control
-
-	// Update Values and Flags slices
-	for i, value := range nsdc.Values {
-		if value == control {
-			// Remove the value from the Values slice
-			nsdc.Values = append(nsdc.Values[:i], nsdc.Values[i+1:]...)
-			// Remove the corresponding flag from the Flags slice
-			nsdc.Flags = append(nsdc.Flags[:i], nsdc.Flags[i+1:]...)
-			break
-		}
-	}
-
-	return true
 }
