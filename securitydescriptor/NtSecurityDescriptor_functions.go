@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/identity"
 )
 
@@ -227,4 +228,68 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedExtendedRights(exp
 	}
 
 	return unexpectedIdentities
+}
+
+// GetOwner returns the Owner field of the NtSecurityDescriptor.
+//
+// Returns:
+//   - identity.Identity: The Owner field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) GetOwner() identity.Identity {
+	return ntsd.Owner
+}
+
+// SetOwner sets the Owner field of the NtSecurityDescriptor.
+//
+// Parameters:
+//   - owner (identity.Identity): The new Owner field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) SetOwner(owner identity.Identity) {
+	ntsd.Owner = owner
+}
+
+// GetGroup returns the Group field of the NtSecurityDescriptor.
+//
+// Returns:
+//   - identity.Identity: The Group field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) GetGroup() identity.Identity {
+	return ntsd.Group
+}
+
+// SetGroup sets the Group field of the NtSecurityDescriptor.
+//
+// Parameters:
+//   - group (identity.Identity): The new Group field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) SetGroup(group identity.Identity) {
+	ntsd.Group = group
+}
+
+// GetDacl returns the DACL field of the NtSecurityDescriptor.
+//
+// Returns:
+//   - acl.DiscretionaryAccessControlList: The DACL field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) GetDacl() acl.DiscretionaryAccessControlList {
+	return ntsd.DACL
+}
+
+// SetDacl sets the DACL field of the NtSecurityDescriptor.
+//
+// Parameters:
+//   - dacl (acl.DiscretionaryAccessControlList): The new DACL field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) SetDacl(dacl acl.DiscretionaryAccessControlList) {
+	ntsd.DACL = dacl
+}
+
+// GetSacl returns the SACL field of the NtSecurityDescriptor.
+//
+// Returns:
+//   - acl.SystemAccessControlList: The SACL field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) GetSacl() acl.SystemAccessControlList {
+	return ntsd.SACL
+}
+
+// SetSacl sets the SACL field of the NtSecurityDescriptor.
+//
+// Parameters:
+//   - sacl (acl.SystemAccessControlList): The new SACL field of the NtSecurityDescriptor.
+func (ntsd *NtSecurityDescriptor) SetSacl(sacl acl.SystemAccessControlList) {
+	ntsd.SACL = sacl
 }

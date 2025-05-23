@@ -1,6 +1,8 @@
 package securitydescriptor
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 // NtSecurityDescriptorControl represents the control flags for a NT Security Descriptor.
 // The fields are defined as constants to represent their bit positions.

@@ -88,27 +88,31 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	// Initialize a byte slice to hold the serialized data
 	var serializedData []byte
 
+	// Marshal SACL
 	dataSacl, err := ntsd.SACL.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal SACL: %w", err)
 	}
 	offsetSacl := 20 // (0x00000014)
 
+	// Marshal DACL
 	dataDacl, err := ntsd.DACL.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal DACL: %w", err)
 	}
 	offsetDacl := offsetSacl + len(dataSacl)
 
+	// Marshal Owner
 	dataOwner, err := ntsd.Owner.SID.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal Owner: %w", err)
 	}
 	offsetOwner := offsetSacl + len(dataSacl) + len(dataDacl)
 
+	// Marshal Group
 	dataGroup, err := ntsd.Group.SID.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal Group: %w", err)
 	}
 	offsetGroup := offsetSacl + len(dataSacl) + len(dataDacl) + len(dataOwner)
 
@@ -119,7 +123,7 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	ntsd.Header.OffsetDacl = uint32(offsetDacl)
 	serializedData, err = ntsd.Header.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal Header: %w", err)
 	}
 
 	// Append the SACL bytes if present
