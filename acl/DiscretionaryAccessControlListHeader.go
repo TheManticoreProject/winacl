@@ -19,7 +19,7 @@ type DiscretionaryAccessControlListHeader struct {
 	RawBytesSize uint32
 }
 
-// Parse initializes the DiscretionaryAccessControlListHeader struct by parsing the raw byte slice.
+// Unmarshal initializes the DiscretionaryAccessControlListHeader struct by parsing the raw byte slice.
 // It sets the RawBytes and RawBytesSize fields, parses the header, and then parses each ACE.
 //
 // Parameters:

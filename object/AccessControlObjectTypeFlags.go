@@ -28,7 +28,7 @@ func (acotype *AccessControlObjectTypeFlags) Unmarshal(rawBytes []byte) (int, er
 	return 4, nil
 }
 
-// ToBytes serializes the AccessControlObjectTypeFlags struct into a byte slice.
+// Marshal serializes the AccessControlObjectTypeFlags struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the AccessControlObjectTypeFlags.

@@ -105,7 +105,7 @@ func Test_SID_FromStringMarshal(t *testing.T) {
 	}
 }
 
-func Test_SID_FromBytesToString(t *testing.T) {
+func Test_SID_UnmarshalToString(t *testing.T) {
 	sid := &SID{}
 	rawBytes, _ := hex.DecodeString("01020000000000052000000020020000")
 	_, err := sid.Unmarshal(rawBytes)
@@ -115,7 +115,7 @@ func Test_SID_FromBytesToString(t *testing.T) {
 	expectedString := "S-1-5-32-544"
 	actualString := sid.ToString()
 	if actualString != expectedString {
-		t.Errorf("FromBytes() failed: expected %s, got %s", expectedString, actualString)
+		t.Errorf("Unmarshal() failed: expected %s, got %s", expectedString, actualString)
 	}
 }
 

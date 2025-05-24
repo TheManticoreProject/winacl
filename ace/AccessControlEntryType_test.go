@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestAccessControlEntryType_Involution tests the involution property of the AccessControlEntryType's ToBytes and Parse methods.
+// TestAccessControlEntryType_Involution tests the involution property of the AccessControlEntryType's Marshal and Unmarshal methods.
 func TestAccessControlEntryType_Involution(t *testing.T) {
 	originalType := AccessControlEntryType{
 		Value: 0x05,

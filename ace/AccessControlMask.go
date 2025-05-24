@@ -23,7 +23,7 @@ type AccessControlMask struct {
 	RawBytesSize uint32 // Size of the raw bytes
 }
 
-// Parse populates the AccessControlMask from raw byte data.
+// Unmarshal populates the AccessControlMask from raw byte data.
 // It extracts the RawValue and determines the corresponding flags and their names.
 func (acm *AccessControlMask) Unmarshal(marshalledData []byte) (int, error) {
 	// Store the raw bytes and set the size
