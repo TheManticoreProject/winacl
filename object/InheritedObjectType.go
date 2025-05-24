@@ -46,7 +46,7 @@ func (inheritedObjType *InheritedObjectType) Unmarshal(rawBytes []byte) (int, er
 	return int(inheritedObjType.RawBytesSize), nil
 }
 
-// ToBytes returns the raw byte representation of the ObjectType.
+// Marshal returns the raw byte representation of the InheritedObjectType.
 // It returns the GUID as a byte slice.
 func (inheritedObjType *InheritedObjectType) Marshal() ([]byte, error) {
 	bytesStream, err := inheritedObjType.GUID.Marshal()

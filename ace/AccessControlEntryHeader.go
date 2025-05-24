@@ -37,7 +37,7 @@ type AccessControlEntryHeader struct {
 	RawBytesSize uint32
 }
 
-// Parse populates the AccessControlEntryHeader struct fields from the provided raw byte slice.
+// Unmarshal populates the AccessControlEntryHeader struct fields from the provided raw byte slice.
 // It extracts the ACE type, flags, and size from the raw byte data.
 // The raw bytes are expected to follow the ACE structure format, where the first byte
 // represents the ACE type, the second byte represents the flags, and the next two bytes
@@ -80,7 +80,7 @@ func (aceheader *AccessControlEntryHeader) Unmarshal(marshalledData []byte) (int
 	return int(aceheader.RawBytesSize), nil
 }
 
-// ToBytes serializes the AccessControlEntryHeader struct into a byte slice.
+// Marshal serializes the AccessControlEntryHeader struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the ACE header.

@@ -10,7 +10,7 @@ type AccessControlListRevision struct {
 	Value uint8
 }
 
-// Parse parses the AccessControlListRevision struct from a byte slice.
+// Unmarshal parses the AccessControlListRevision struct from a byte slice.
 //
 // Parameters:
 //   - rawBytes ([]byte): The byte slice to parse.

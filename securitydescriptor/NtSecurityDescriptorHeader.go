@@ -80,7 +80,7 @@ func (ntsd *NtSecurityDescriptorHeader) Unmarshal(marshalledData []byte) (int, e
 	return 20, nil
 }
 
-// ToBytes serializes the NtSecurityDescriptorHeader struct into a byte slice.
+// Marshal serializes the NtSecurityDescriptorHeader struct into a byte slice.
 //
 // Returns:
 //   - []byte: The serialized byte slice representing the security descriptor header.

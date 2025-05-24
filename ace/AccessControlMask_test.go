@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestAccessControlMask_Involution tests the involution property of the AccessControlMask's ToBytes and Parse methods.
+// TestAccessControlMask_Involution tests the involution property of the AccessControlMask's Marshal and Unmarshal methods.
 func TestAccessControlMask_Involution(t *testing.T) {
 	originalMask := AccessControlMask{
 		RawValue: 0x12345678,

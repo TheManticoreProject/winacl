@@ -66,7 +66,7 @@ var AccessControlEntryFlagToName = map[uint8]string{
 	ACE_FLAG_AUDIT_FLAGS:          "AUDIT_FLAGS",
 }
 
-// Parse sets the Value of the AccessControlEntryFlag and looks up its name
+// Unmarshal sets the Value of the AccessControlEntryFlag and looks up its name
 // from a predefined map of flag values to names. If the flag value is not
 // found in the map, it assigns the name as "?".
 //
