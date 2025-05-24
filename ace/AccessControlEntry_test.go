@@ -52,3 +52,21 @@ func TestAccessControlEntry_Involution_ACE_TYPE_ACCESS_ALLOWED(t *testing.T) {
 		}
 	}
 }
+
+func TestAccessControlEntry_Size(t *testing.T) {
+	hexData := []string{
+		"00002400ff010f0001050000000000051500000028bb82279261b9fe2474aa5d00020000",
+	}
+	for _, hexData := range hexData {
+		rawBytes, err := hex.DecodeString(hexData)
+		if err != nil {
+			t.Fatalf("Failed to decode hex string: %v", err)
+		}
+
+		var ace AccessControlEntry
+		_, err = ace.Unmarshal(rawBytes)
+		if err != nil {
+			t.Fatalf("Failed to unmarshal AccessControlEntry: %v", err)
+		}
+	}
+}

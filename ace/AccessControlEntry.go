@@ -750,9 +750,13 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		marshalledData = append(marshalledData, bytesStream...)
 	}
 
-	// Pad the marshalled data to the size specified in the ACE header
-	for uint32(len(marshalledData)) < uint32(ace.Header.Size) {
-		marshalledData = append(marshalledData, 0)
+	if ace.Header.Size > uint16(len(marshalledData)) {
+		// Pad the marshalled data to the size specified in the ACE header
+		for uint32(len(marshalledData)) < uint32(ace.Header.Size) {
+			marshalledData = append(marshalledData, 0)
+		}
+	} else {
+		ace.Header.Size = uint16(len(marshalledData))
 	}
 
 	return marshalledData, nil
