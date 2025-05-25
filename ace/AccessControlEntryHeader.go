@@ -32,6 +32,7 @@ type AccessControlEntryHeader struct {
 	Type  AccessControlEntryType
 	Flags AccessControlEntryFlag
 	Size  uint16
+
 	// Internal
 	RawBytes     []byte
 	RawBytesSize uint32

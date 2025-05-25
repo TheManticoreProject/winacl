@@ -2,7 +2,6 @@ package ace
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/TheManticoreProject/winacl/identity"
@@ -550,11 +549,8 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 	marshalledData := make([]byte, 0)
 
-	bytesStream, err := ace.Header.Marshal()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal Header: %w", err)
-	}
-	marshalledData = append(marshalledData, bytesStream...)
+	var err error
+	var bytesStream []byte
 
 	switch ace.Header.Type.Value {
 
@@ -750,37 +746,25 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		marshalledData = append(marshalledData, bytesStream...)
 	}
 
-	if ace.Header.Size > uint16(len(marshalledData)) {
+	// Pad the marshalled data to the size specified in the ACE header
+	headerSize := 4
+	if ace.Header.Size > uint16(len(marshalledData)+headerSize) {
 		// Pad the marshalled data to the size specified in the ACE header
-		for uint32(len(marshalledData)) < uint32(ace.Header.Size) {
+		for uint32(len(marshalledData)+headerSize) < uint32(ace.Header.Size) {
 			marshalledData = append(marshalledData, 0)
 		}
 	} else {
-		ace.Header.Size = uint16(len(marshalledData))
+		ace.Header.Size = uint16(len(marshalledData) + headerSize)
 	}
 
+	// Marshal Header and append at start of marshalled data
+	bytesStream, err = ace.Header.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Header: %w", err)
+	}
+	marshalledData = append(bytesStream, marshalledData...)
+
 	return marshalledData, nil
-}
-
-// IsInherited checks whether the Access Control Entry (ACE) is inherited
-// from a parent object. This is determined by checking if the ACE_FLAG_INHERITED
-// is present in the Flags.Values slice of the ACE header.
-//
-// Returns:
-// - bool: true if the ACE is inherited, false otherwise.
-func (ace *AccessControlEntry) IsInherited() bool {
-	return slices.Contains(ace.Header.Flags.Values, ACE_FLAG_INHERITED)
-}
-
-// HasFlag checks if a specific flag is set within the ACE's flags.
-//
-// Parameters:
-// - flag: The integer value of the flag to check.
-//
-// Returns:
-// - bool: true if the specified flag is set, false otherwise.
-func (ace *AccessControlEntry) HasFlag(flag uint8) bool {
-	return slices.Contains(ace.Header.Flags.Values, flag)
 }
 
 // Describe prints a detailed description of the AccessControlEntry struct,
