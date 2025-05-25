@@ -64,20 +64,20 @@ func (aco *AccessControlObjectType) Unmarshal(rawBytes []byte) (int, error) {
 // Returns:
 //   - []byte: The serialized byte slice representing the AccessControlObjectType.
 func (aco *AccessControlObjectType) Marshal() ([]byte, error) {
-	var serializedData []byte
+	var marshalledData []byte
 
 	bytesStream, err := aco.Flags.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	serializedData = append(serializedData, bytesStream...)
+	marshalledData = append(marshalledData, bytesStream...)
 
 	if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
 		bytesStream, err = aco.ObjectType.Marshal()
 		if err != nil {
 			return nil, err
 		}
-		serializedData = append(serializedData, bytesStream...)
+		marshalledData = append(marshalledData, bytesStream...)
 	}
 
 	if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
@@ -85,10 +85,10 @@ func (aco *AccessControlObjectType) Marshal() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		serializedData = append(serializedData, bytesStream...)
+		marshalledData = append(marshalledData, bytesStream...)
 	}
 
-	return serializedData, nil
+	return marshalledData, nil
 }
 
 // Describe prints a human-readable representation of the AccessControlObjectType.

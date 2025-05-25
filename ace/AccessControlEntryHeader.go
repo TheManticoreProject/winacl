@@ -85,25 +85,25 @@ func (aceheader *AccessControlEntryHeader) Unmarshal(marshalledData []byte) (int
 // Returns:
 //   - []byte: The serialized byte slice representing the ACE header.
 func (aceheader *AccessControlEntryHeader) Marshal() ([]byte, error) {
-	serializedData := make([]byte, 0)
+	marshalledData := make([]byte, 0)
 
 	bytesStream, err := aceheader.Type.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Type: %w", err)
 	}
-	serializedData = append(serializedData, bytesStream...)
+	marshalledData = append(marshalledData, bytesStream...)
 
 	bytesStream, err = aceheader.Flags.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Flags: %w", err)
 	}
-	serializedData = append(serializedData, bytesStream...)
+	marshalledData = append(marshalledData, bytesStream...)
 
 	buffer := make([]byte, 2)
 	binary.LittleEndian.PutUint16(buffer, aceheader.Size)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
 
-	return serializedData, nil
+	return marshalledData, nil
 }
 
 // Describe prints a human-readable representation of the AccessControlEntryHeader struct.

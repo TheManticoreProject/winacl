@@ -85,32 +85,32 @@ func (ntsd *NtSecurityDescriptorHeader) Unmarshal(marshalledData []byte) (int, e
 // Returns:
 //   - []byte: The serialized byte slice representing the security descriptor header.
 func (ntsdh *NtSecurityDescriptorHeader) Marshal() ([]byte, error) {
-	serializedData := []byte{}
+	marshalledData := []byte{}
 
-	serializedData = append(serializedData, ntsdh.Revision)
+	marshalledData = append(marshalledData, ntsdh.Revision)
 
-	serializedData = append(serializedData, ntsdh.Sbz1)
+	marshalledData = append(marshalledData, ntsdh.Sbz1)
 
 	bytesStream, err := ntsdh.Control.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	serializedData = append(serializedData, bytesStream...)
+	marshalledData = append(marshalledData, bytesStream...)
 
 	buffer := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetOwner)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
 
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetGroup)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
 
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetSacl)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
 
 	binary.LittleEndian.PutUint32(buffer, ntsdh.OffsetDacl)
-	serializedData = append(serializedData, buffer...)
+	marshalledData = append(marshalledData, buffer...)
 
-	return serializedData, nil
+	return marshalledData, nil
 }
 
 // Describe prints a detailed description of the NtSecurityDescriptorHeader struct,
@@ -125,9 +125,9 @@ func (ntsd *NtSecurityDescriptorHeader) Describe(indent int) {
 	fmt.Printf("%s │ \x1b[93mRevision\x1b[0m    : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, ntsd.Revision)
 	fmt.Printf("%s │ \x1b[93mSbz1\x1b[0m        : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, ntsd.Sbz1)
 	fmt.Printf("%s │ \x1b[93mControl\x1b[0m     : \x1b[96m0x%04x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, ntsd.Control.RawValue, strings.Join(ntsd.Control.Flags, "|"))
-	fmt.Printf("%s │ \x1b[93mOffsetOwner\x1b[0m : \x1b[96m0x%08x\x1b[0m\n", indentPrompt, ntsd.OffsetOwner)
-	fmt.Printf("%s │ \x1b[93mOffsetGroup\x1b[0m : \x1b[96m0x%08x\x1b[0m\n", indentPrompt, ntsd.OffsetGroup)
-	fmt.Printf("%s │ \x1b[93mOffsetSacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m\n", indentPrompt, ntsd.OffsetSacl)
-	fmt.Printf("%s │ \x1b[93mOffsetDacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m\n", indentPrompt, ntsd.OffsetDacl)
+	fmt.Printf("%s │ \x1b[93mOffsetOwner\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetOwner, ntsd.OffsetOwner)
+	fmt.Printf("%s │ \x1b[93mOffsetGroup\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetGroup, ntsd.OffsetGroup)
+	fmt.Printf("%s │ \x1b[93mOffsetSacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetSacl, ntsd.OffsetSacl)
+	fmt.Printf("%s │ \x1b[93mOffsetDacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetDacl, ntsd.OffsetDacl)
 	fmt.Printf("%s └─\n", indentPrompt)
 }

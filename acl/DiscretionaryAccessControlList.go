@@ -56,26 +56,26 @@ func (dacl *DiscretionaryAccessControlList) Unmarshal(marshalledData []byte) (in
 // Returns:
 //   - []byte: The serialized byte slice representing the DACL.
 func (dacl *DiscretionaryAccessControlList) Marshal() ([]byte, error) {
-	var marshaledData []byte
+	var marshalledData []byte
 
 	for _, ace := range dacl.Entries {
 		bytesStream, err := ace.Marshal()
 		if err != nil {
 			return nil, err
 		}
-		marshaledData = append(marshaledData, bytesStream...)
+		marshalledData = append(marshalledData, bytesStream...)
 	}
 
 	// Marshal the header at the beginning of the serialized data
 	// We need to include the header in the size calculation, it is 8 bytes long
-	dacl.Header.AclSize = uint16(8 + len(marshaledData))
+	dacl.Header.AclSize = uint16(8 + len(marshalledData))
 	bytesStream, err := dacl.Header.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	marshaledData = append(bytesStream, marshaledData...)
+	marshalledData = append(bytesStream, marshalledData...)
 
-	return marshaledData, nil
+	return marshalledData, nil
 }
 
 // Describe prints a detailed description of the DiscretionaryAccessControlList struct,

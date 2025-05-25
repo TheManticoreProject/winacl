@@ -61,11 +61,11 @@ func (acm *AccessControlMask) Unmarshal(marshalledData []byte) (int, error) {
 // Returns:
 //   - []byte: The serialized byte slice representing the AccessControlMask.
 func (acm *AccessControlMask) Marshal() ([]byte, error) {
-	serializedData := make([]byte, 4)
+	marshalledData := make([]byte, 4)
 
-	binary.LittleEndian.PutUint32(serializedData, acm.RawValue)
+	binary.LittleEndian.PutUint32(marshalledData, acm.RawValue)
 
-	return serializedData, nil
+	return marshalledData, nil
 }
 
 // String returns a string representation of the AccessControlMask.

@@ -33,11 +33,11 @@ func (acotype *AccessControlObjectTypeFlags) Unmarshal(rawBytes []byte) (int, er
 // Returns:
 //   - []byte: The serialized byte slice representing the AccessControlObjectTypeFlags.
 func (acotype *AccessControlObjectTypeFlags) Marshal() ([]byte, error) {
-	serializedData := make([]byte, 4)
+	marshalledData := make([]byte, 4)
 
-	binary.LittleEndian.PutUint32(serializedData, acotype.Value)
+	binary.LittleEndian.PutUint32(marshalledData, acotype.Value)
 
-	return serializedData, nil
+	return marshalledData, nil
 }
 
 // String returns a string representation of the AccessControlObjectTypeFlags.
