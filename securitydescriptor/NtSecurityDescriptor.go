@@ -86,21 +86,30 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 //   - ([]byte, error): A byte slice containing the serialized data and an error if serialization fails, otherwise nil.
 func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	// Initialize a byte slice to hold the serialized data
-	var serializedData []byte
+	var err error
+	var marshaledData []byte
 
 	// Marshal SACL
-	dataSacl, err := ntsd.SACL.Marshal()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal SACL: %w", err)
+	dataSacl := []byte{}
+	offsetSacl := 0
+	if len(ntsd.SACL.Entries) > 0 {
+		dataSacl, err = ntsd.SACL.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal SACL: %w", err)
+		}
+		offsetSacl = 20 // (0x00000014)
 	}
-	offsetSacl := 20 // (0x00000014)
 
 	// Marshal DACL
-	dataDacl, err := ntsd.DACL.Marshal()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal DACL: %w", err)
+	dataDacl := []byte{}
+	offsetDacl := 0
+	if len(ntsd.DACL.Entries) > 0 {
+		dataDacl, err = ntsd.DACL.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal DACL: %w", err)
+		}
+		offsetDacl = offsetSacl + len(dataSacl)
 	}
-	offsetDacl := offsetSacl + len(dataSacl)
 
 	// Marshal Owner
 	dataOwner, err := ntsd.Owner.SID.Marshal()
@@ -121,29 +130,29 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	ntsd.Header.OffsetGroup = uint32(offsetGroup)
 	ntsd.Header.OffsetSacl = uint32(offsetSacl)
 	ntsd.Header.OffsetDacl = uint32(offsetDacl)
-	serializedData, err = ntsd.Header.Marshal()
+	marshaledData, err = ntsd.Header.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Header: %w", err)
 	}
 
 	// Append the SACL bytes if present
 	if ntsd.Header.OffsetSacl != 0 {
-		serializedData = append(serializedData, dataSacl...)
+		marshaledData = append(marshaledData, dataSacl...)
 	}
 	// Append the DACL bytes if present
 	if ntsd.Header.OffsetDacl != 0 {
-		serializedData = append(serializedData, dataDacl...)
+		marshaledData = append(marshaledData, dataDacl...)
 	}
 	// Append the Owner SID bytes if present
 	if ntsd.Header.OffsetOwner != 0 {
-		serializedData = append(serializedData, dataOwner...)
+		marshaledData = append(marshaledData, dataOwner...)
 	}
 	// Append the Group SID bytes if present
 	if ntsd.Header.OffsetGroup != 0 {
-		serializedData = append(serializedData, dataGroup...)
+		marshaledData = append(marshaledData, dataGroup...)
 	}
 
-	return serializedData, nil
+	return marshaledData, nil
 }
 
 // Describe prints the NtSecurityDescriptor in a human-readable format.
@@ -169,7 +178,7 @@ func (ntsd *NtSecurityDescriptor) Describe(indent int) {
 
 	if ntsd.Header.OffsetSacl > ntsd.Header.OffsetDacl {
 		// Print DACL
-		if ntsd.Header.OffsetDacl != 0 {
+		if len(ntsd.DACL.Entries) > 0 {
 			ntsd.DACL.Describe(indent + 1)
 		} else {
 			fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
@@ -177,7 +186,7 @@ func (ntsd *NtSecurityDescriptor) Describe(indent int) {
 		}
 
 		// Print SACL
-		if ntsd.Header.OffsetSacl != 0 {
+		if len(ntsd.SACL.Entries) > 0 {
 			ntsd.SACL.Describe(indent + 1)
 		} else {
 			fmt.Printf("%s<SystemAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
@@ -185,7 +194,7 @@ func (ntsd *NtSecurityDescriptor) Describe(indent int) {
 		}
 	} else {
 		// Print SACL
-		if ntsd.Header.OffsetSacl != 0 {
+		if len(ntsd.SACL.Entries) > 0 {
 			ntsd.SACL.Describe(indent + 1)
 		} else {
 			fmt.Printf("%s<SystemAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
@@ -193,7 +202,7 @@ func (ntsd *NtSecurityDescriptor) Describe(indent int) {
 		}
 
 		// Print DACL
-		if ntsd.Header.OffsetDacl != 0 {
+		if len(ntsd.DACL.Entries) > 0 {
 			ntsd.DACL.Describe(indent + 1)
 		} else {
 			fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
