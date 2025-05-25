@@ -43,38 +43,54 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 
 	// Unmarshal Owner if present
 	if ntsd.Header.OffsetOwner != 0 {
-		rawBytesSize, err := ntsd.Owner.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetOwner:])
-		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal Owner: %w", err)
+		if ntsd.Header.OffsetOwner < uint32(len(ntsd.RawBytes)) {
+			rawBytesSize, err := ntsd.Owner.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetOwner:])
+			if err != nil {
+				return 0, fmt.Errorf("failed to unmarshal Owner: %w", err)
+			}
+			ntsd.RawBytesSize += uint32(rawBytesSize)
+		} else {
+			return 0, fmt.Errorf("failed to unmarshal Owner: offset is out of bounds OffsetOwner=%d, RawBytesSize=%d", ntsd.Header.OffsetOwner, ntsd.RawBytesSize)
 		}
-		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
 	// Unmarshal Group if present
 	if ntsd.Header.OffsetGroup != 0 {
-		rawBytesSize, err := ntsd.Group.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetGroup:])
-		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal Group: %w", err)
+		if ntsd.Header.OffsetGroup < uint32(len(ntsd.RawBytes)) {
+			rawBytesSize, err := ntsd.Group.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetGroup:])
+			if err != nil {
+				return 0, fmt.Errorf("failed to unmarshal Group: %w", err)
+			}
+			ntsd.RawBytesSize += uint32(rawBytesSize)
+		} else {
+			return 0, fmt.Errorf("failed to unmarshal Group: offset is out of bounds OffsetGroup=%d, RawBytesSize=%d", ntsd.Header.OffsetGroup, ntsd.RawBytesSize)
 		}
-		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
 	// Unmarshal DACL if present
 	if ntsd.Header.OffsetDacl != 0 {
-		rawBytesSize, err := ntsd.DACL.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetDacl:])
-		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal DACL: %w", err)
+		if ntsd.Header.OffsetDacl < uint32(len(ntsd.RawBytes)) {
+			rawBytesSize, err := ntsd.DACL.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetDacl:])
+			if err != nil {
+				return 0, fmt.Errorf("failed to unmarshal DACL: %w", err)
+			}
+			ntsd.RawBytesSize += uint32(rawBytesSize)
+		} else {
+			return 0, fmt.Errorf("failed to unmarshal DACL: offset is out of bounds OffsetDacl=%d, RawBytesSize=%d", ntsd.Header.OffsetDacl, ntsd.RawBytesSize)
 		}
-		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
 	// Unmarshal SACL if present
 	if ntsd.Header.OffsetSacl != 0 {
-		rawBytesSize, err := ntsd.SACL.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetSacl:])
-		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SACL: %w", err)
+		if ntsd.Header.OffsetSacl < uint32(len(ntsd.RawBytes)) {
+			rawBytesSize, err := ntsd.SACL.Unmarshal(ntsd.RawBytes[ntsd.Header.OffsetSacl:])
+			if err != nil {
+				return 0, fmt.Errorf("failed to unmarshal SACL: %w", err)
+			}
+			ntsd.RawBytesSize += uint32(rawBytesSize)
+		} else {
+			return 0, fmt.Errorf("failed to unmarshal SACL: offset is out of bounds OffsetSacl=%d, RawBytesSize=%d", ntsd.Header.OffsetSacl, ntsd.RawBytesSize)
 		}
-		ntsd.RawBytesSize += uint32(rawBytesSize)
 	}
 
 	return int(ntsd.RawBytesSize), nil
@@ -87,7 +103,9 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	// Initialize a byte slice to hold the serialized data
 	var err error
-	var marshaledData []byte
+	var marshalledData []byte
+
+	offset := 20
 
 	// Marshal SACL
 	dataSacl := []byte{}
@@ -97,7 +115,8 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal SACL: %w", err)
 		}
-		offsetSacl = 20 // (0x00000014)
+		offsetSacl = offset // (0x00000014)
+		offset += len(dataSacl)
 	}
 
 	// Marshal DACL
@@ -108,7 +127,8 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal DACL: %w", err)
 		}
-		offsetDacl = offsetSacl + len(dataSacl)
+		offsetDacl = offset
+		offset += len(dataDacl)
 	}
 
 	// Marshal Owner
@@ -116,43 +136,45 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Owner: %w", err)
 	}
-	offsetOwner := offsetSacl + len(dataSacl) + len(dataDacl)
+	offsetOwner := offset
+	offset += len(dataOwner)
 
 	// Marshal Group
 	dataGroup, err := ntsd.Group.SID.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Group: %w", err)
 	}
-	offsetGroup := offsetSacl + len(dataSacl) + len(dataDacl) + len(dataOwner)
+	offsetGroup := offset
+	offset += len(dataGroup)
 
 	// Update the header and append the header bytes
 	ntsd.Header.OffsetOwner = uint32(offsetOwner)
 	ntsd.Header.OffsetGroup = uint32(offsetGroup)
 	ntsd.Header.OffsetSacl = uint32(offsetSacl)
 	ntsd.Header.OffsetDacl = uint32(offsetDacl)
-	marshaledData, err = ntsd.Header.Marshal()
+	marshalledData, err = ntsd.Header.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Header: %w", err)
 	}
 
 	// Append the SACL bytes if present
 	if ntsd.Header.OffsetSacl != 0 {
-		marshaledData = append(marshaledData, dataSacl...)
+		marshalledData = append(marshalledData, dataSacl...)
 	}
 	// Append the DACL bytes if present
 	if ntsd.Header.OffsetDacl != 0 {
-		marshaledData = append(marshaledData, dataDacl...)
+		marshalledData = append(marshalledData, dataDacl...)
 	}
 	// Append the Owner SID bytes if present
 	if ntsd.Header.OffsetOwner != 0 {
-		marshaledData = append(marshaledData, dataOwner...)
+		marshalledData = append(marshalledData, dataOwner...)
 	}
 	// Append the Group SID bytes if present
 	if ntsd.Header.OffsetGroup != 0 {
-		marshaledData = append(marshaledData, dataGroup...)
+		marshalledData = append(marshalledData, dataGroup...)
 	}
 
-	return marshaledData, nil
+	return marshalledData, nil
 }
 
 // Describe prints the NtSecurityDescriptor in a human-readable format.

@@ -9,11 +9,11 @@ import (
 )
 
 func TestNtSecurityDescriptorControl_Involution(t *testing.T) {
-	serializedData := make([]byte, 2)
-	binary.LittleEndian.PutUint16(serializedData, uint16(securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SR|securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SP))
+	marshalledData := make([]byte, 2)
+	binary.LittleEndian.PutUint16(marshalledData, uint16(securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SR|securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SP))
 
 	control := &securitydescriptor.NtSecurityDescriptorControl{}
-	_, err := control.Unmarshal(serializedData)
+	_, err := control.Unmarshal(marshalledData)
 	if err != nil {
 		t.Errorf("NtSecurityDescriptorControl.Unmarshal() failed: %v", err)
 	}
@@ -22,19 +22,19 @@ func TestNtSecurityDescriptorControl_Involution(t *testing.T) {
 		t.Errorf("NtSecurityDescriptorControl.Marshal() failed: %v", err)
 	}
 
-	if !bytes.Equal(data, serializedData) {
+	if !bytes.Equal(data, marshalledData) {
 		t.Errorf("NtSecurityDescriptorControl.Marshal() failed: Output of header.Marshal() is not equal to input rawBytes")
 	}
 }
 
 func TestNtSecurityDescriptorControl_Unmarshal(t *testing.T) {
 	uintValue := uint16(securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SR | securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SP)
-	serializedData := make([]byte, 2)
-	binary.LittleEndian.PutUint16(serializedData, uintValue)
+	marshalledData := make([]byte, 2)
+	binary.LittleEndian.PutUint16(marshalledData, uintValue)
 	expectedFlags := []uint16{securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SP, securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SR}
 
 	control := &securitydescriptor.NtSecurityDescriptorControl{}
-	_, err := control.Unmarshal(serializedData)
+	_, err := control.Unmarshal(marshalledData)
 	if err != nil {
 		t.Errorf("NtSecurityDescriptorControl.Unmarshal() failed: %v", err)
 	}
@@ -56,11 +56,11 @@ func TestNtSecurityDescriptorControl_Unmarshal(t *testing.T) {
 
 func TestNtSecurityDescriptorControl_Marshal(t *testing.T) {
 	uintValue := uint16(securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SR | securitydescriptor.NT_SECURITY_DESCRIPTOR_CONTROL_SP)
-	serializedData := make([]byte, 2)
-	binary.LittleEndian.PutUint16(serializedData, uintValue)
+	marshalledData := make([]byte, 2)
+	binary.LittleEndian.PutUint16(marshalledData, uintValue)
 
 	control := &securitydescriptor.NtSecurityDescriptorControl{}
-	_, err := control.Unmarshal(serializedData)
+	_, err := control.Unmarshal(marshalledData)
 	if err != nil {
 		t.Errorf("NtSecurityDescriptorControl.Unmarshal() failed: %v", err)
 	}
@@ -69,11 +69,11 @@ func TestNtSecurityDescriptorControl_Marshal(t *testing.T) {
 		t.Errorf("NtSecurityDescriptorControl.Marshal() failed: %v", err)
 	}
 
-	if !bytes.Equal(data, serializedData) {
+	if !bytes.Equal(data, marshalledData) {
 		t.Errorf("NtSecurityDescriptorControl.Marshal() failed: Output of header.Marshal() is not equal to input rawBytes")
 	}
 
-	deserializedValue := binary.LittleEndian.Uint16(serializedData)
+	deserializedValue := binary.LittleEndian.Uint16(marshalledData)
 	if deserializedValue != uintValue {
 		t.Errorf("Expected deserialized value to be 0x%04x, but got 0x%04x", uintValue, deserializedValue)
 	}

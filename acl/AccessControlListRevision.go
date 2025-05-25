@@ -25,11 +25,11 @@ func (aclrev *AccessControlListRevision) Unmarshal(marshalledData []byte) (int, 
 // Returns:
 //   - []byte: The serialized byte slice representing the ACL revision.
 func (aclrev *AccessControlListRevision) Marshal() ([]byte, error) {
-	var serializedData []byte
+	var marshalledData []byte
 
-	serializedData = append(serializedData, aclrev.Value)
+	marshalledData = append(marshalledData, aclrev.Value)
 
-	return serializedData, nil
+	return marshalledData, nil
 }
 
 // String returns the string representation of the AccessControlListRevision struct.

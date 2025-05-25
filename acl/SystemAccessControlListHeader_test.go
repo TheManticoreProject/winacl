@@ -57,7 +57,7 @@ func TestSystemAccessControlListHeader_MarshalUnmarshal(t *testing.T) {
 
 	// Verify that the original marshalled data matches the remarshalled data
 	if !bytes.Equal(marshalledData, remarshalled) {
-		t.Errorf("Marshalled data mismatch: original and remarshalled data are not equal")
+		t.Errorf("Marshaled data mismatch: original and remarshalled data are not equal")
 	}
 }
 

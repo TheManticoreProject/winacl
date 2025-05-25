@@ -101,16 +101,16 @@ func TestNtSecurityDescriptor_Unmarshal(t *testing.T) {
 	a.SID.SID.FromString("S-1-5-21-2919671431-737980799-3592259605-1112")
 	ntsd.DACL.AddEntry(a)
 
-	// ntsd.Describe(0)
-
-	_, err := ntsd.Marshal()
+	binaryNTSecurityDescriptor, err := ntsd.Marshal()
 	if err != nil {
 		t.Errorf("error marshalling NTSecurityDescriptor: %s", err)
 	}
 
-	// ntsd2 := &securitydescriptor.NtSecurityDescriptor{}
-	// _, err = ntsd2.Unmarshal(binaryNTSecurityDescriptor)
-	// if err != nil {
-	// 	t.Errorf("error unmarshalling NTSecurityDescriptor: %s", err)
-	// }
+	ntsd.Describe(0)
+
+	ntsd2 := &securitydescriptor.NtSecurityDescriptor{}
+	_, err = ntsd2.Unmarshal(binaryNTSecurityDescriptor)
+	if err != nil {
+		t.Errorf("error unmarshalling NTSecurityDescriptor: %s", err)
+	}
 }

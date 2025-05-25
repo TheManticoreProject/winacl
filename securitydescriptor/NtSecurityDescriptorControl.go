@@ -98,7 +98,7 @@ func (nsdc *NtSecurityDescriptorControl) Unmarshal(rawValue []byte) (int, error)
 // Returns:
 //   - []byte: The serialized byte slice representing the security descriptor control.
 func (nsdc *NtSecurityDescriptorControl) Marshal() ([]byte, error) {
-	serializedData := make([]byte, 2)
-	binary.LittleEndian.PutUint16(serializedData, nsdc.RawValue)
-	return serializedData, nil
+	marshalledData := make([]byte, 2)
+	binary.LittleEndian.PutUint16(marshalledData, nsdc.RawValue)
+	return marshalledData, nil
 }
