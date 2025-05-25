@@ -101,7 +101,7 @@ func TestNtSecurityDescriptor_Unmarshal(t *testing.T) {
 	a.SID.SID.FromString("S-1-5-21-2919671431-737980799-3592259605-1112")
 	ntsd.DACL.AddEntry(a)
 
-	ntsd.Describe(0)
+	// ntsd.Describe(0)
 
 	_, err := ntsd.Marshal()
 	if err != nil {
