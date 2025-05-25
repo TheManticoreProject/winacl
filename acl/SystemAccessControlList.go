@@ -57,14 +57,7 @@ func (sacl *SystemAccessControlList) Unmarshal(marshalledData []byte) (int, erro
 // Returns:
 //   - []byte: The serialized byte slice representing the SACL.
 func (sacl *SystemAccessControlList) Marshal() ([]byte, error) {
-	var serializedData []byte
-
-	// Marshal the header
-	bytesStream, err := sacl.Header.Marshal()
-	if err != nil {
-		return nil, err
-	}
-	serializedData = append(serializedData, bytesStream...)
+	var marshaledData []byte
 
 	// Marshal the entries
 	for _, ace := range sacl.Entries {
@@ -72,10 +65,19 @@ func (sacl *SystemAccessControlList) Marshal() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		serializedData = append(serializedData, bytesStream...)
+		marshaledData = append(marshaledData, bytesStream...)
 	}
 
-	return serializedData, nil
+	// Marshal the header at the beginning of the serialized data
+	// We need to include the header in the size calculation, it is 8 bytes long
+	sacl.Header.AclSize = uint16(8 + len(marshaledData))
+	bytesStream, err := sacl.Header.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	marshaledData = append(bytesStream, marshaledData...)
+
+	return marshaledData, nil
 }
 
 // Describe prints a detailed description of the SystemAccessControlList struct,
