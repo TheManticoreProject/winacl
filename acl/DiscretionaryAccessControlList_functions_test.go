@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/TheManticoreProject/winacl/ace"
+	"github.com/TheManticoreProject/winacl/ace/acetype"
 	"github.com/TheManticoreProject/winacl/acl"
 )
 
@@ -77,10 +78,14 @@ func TestDACLRemoveEntry(t *testing.T) {
 	// Add two entries
 	entry1 := ace.AccessControlEntry{}
 	entry1.Index = 1
+	entry1.Identity.SID.FromString("S-1-5-32-544")
+	entry1.Header.Type.SetType(acetype.ACE_TYPE_ACCESS_ALLOWED)
 	dacl.AddEntry(entry1)
 
 	entry2 := ace.AccessControlEntry{}
 	entry2.Index = 2
+	entry2.Identity.SID.FromString("S-1-5-32-545")
+	entry2.Header.Type.SetType(acetype.ACE_TYPE_ACCESS_ALLOWED)
 	dacl.AddEntry(entry2)
 
 	// Verify initial state

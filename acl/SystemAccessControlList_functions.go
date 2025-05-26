@@ -24,14 +24,16 @@ func (sacl *SystemAccessControlList) AddEntry(entry ace.AccessControlEntry) {
 //
 // Returns:
 //   - None
-func (sacl *SystemAccessControlList) RemoveEntry(ace ace.AccessControlEntry) {
-	for i, entry := range sacl.Entries {
-		if entry.Equal(&ace) {
-			sacl.Entries = append(sacl.Entries[:i], sacl.Entries[i+1:]...)
-			sacl.Header.AceCount = uint16(len(sacl.Entries))
-			return
+func (sacl *SystemAccessControlList) RemoveEntry(entry ace.AccessControlEntry) {
+	newEntries := []ace.AccessControlEntry{}
+	for _, existingEntry := range sacl.Entries {
+		if !entry.Equal(&existingEntry) {
+			newEntries = append(newEntries, existingEntry)
 		}
 	}
+
+	sacl.Entries = newEntries
+	sacl.Header.AceCount = uint16(len(sacl.Entries))
 }
 
 // ClearEntries removes all ACE entries from the SystemAccessControlList.
