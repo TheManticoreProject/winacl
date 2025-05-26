@@ -4,11 +4,13 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
+
+	"github.com/TheManticoreProject/winacl/acl/revision"
 )
 
 // SystemAccessControlListHeader represents the header of a System Access Control List (SACL).
 type SystemAccessControlListHeader struct {
-	Revision AccessControlListRevision
+	Revision revision.AccessControlListRevision
 	Sbz1     uint8
 	AclSize  uint16
 	AceCount uint16

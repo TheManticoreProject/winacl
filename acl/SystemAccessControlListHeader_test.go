@@ -3,12 +3,14 @@ package acl
 import (
 	"bytes"
 	"testing"
+
+	"github.com/TheManticoreProject/winacl/acl/revision"
 )
 
 func TestSystemAccessControlListHeader_MarshalUnmarshal(t *testing.T) {
 	// Create a test header with known values
 	original := SystemAccessControlListHeader{
-		Revision: AccessControlListRevision{
+		Revision: revision.AccessControlListRevision{
 			Value: 0x02,
 		},
 		Sbz1:     0x00,
@@ -70,14 +72,14 @@ func TestSystemAccessControlListHeader_MarshalUnmarshalWithEdgeCases(t *testing.
 		{
 			name: "Zero values",
 			header: SystemAccessControlListHeader{
-				Revision: AccessControlListRevision{Value: 0},
+				Revision: revision.AccessControlListRevision{Value: 0},
 				Sbz1:     0,
 				AclSize:  0,
 				AceCount: 0,
 				Sbz2:     0,
 			},
 			expected: SystemAccessControlListHeader{
-				Revision: AccessControlListRevision{Value: 0},
+				Revision: revision.AccessControlListRevision{Value: 0},
 				Sbz1:     0,
 				AclSize:  0,
 				AceCount: 0,
@@ -87,14 +89,14 @@ func TestSystemAccessControlListHeader_MarshalUnmarshalWithEdgeCases(t *testing.
 		{
 			name: "Maximum values",
 			header: SystemAccessControlListHeader{
-				Revision: AccessControlListRevision{Value: 0xFF},
+				Revision: revision.AccessControlListRevision{Value: 0xFF},
 				Sbz1:     0xFF,
 				AclSize:  0xFFFF,
 				AceCount: 0xFFFF,
 				Sbz2:     0xFFFF,
 			},
 			expected: SystemAccessControlListHeader{
-				Revision: AccessControlListRevision{Value: 0xFF},
+				Revision: revision.AccessControlListRevision{Value: 0xFF},
 				Sbz1:     0xFF,
 				AclSize:  0xFFFF,
 				AceCount: 0xFFFF,

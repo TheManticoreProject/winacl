@@ -4,11 +4,13 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
+
+	"github.com/TheManticoreProject/winacl/acl/revision"
 )
 
 // DiscretionaryAccessControlListHeader represents the header of a Discretionary Access Control List (DACL).
 type DiscretionaryAccessControlListHeader struct {
-	Revision AccessControlListRevision
+	Revision revision.AccessControlListRevision
 	Sbz1     uint8
 	AclSize  uint16
 	AceCount uint16

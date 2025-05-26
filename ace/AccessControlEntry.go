@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/TheManticoreProject/winacl/ace/acetype"
+	"github.com/TheManticoreProject/winacl/ace/header"
+	"github.com/TheManticoreProject/winacl/ace/mask"
 	"github.com/TheManticoreProject/winacl/identity"
 	"github.com/TheManticoreProject/winacl/object"
 )
@@ -11,9 +14,9 @@ import (
 // AccessControlEntry represents an entry in an access control list (ACL).
 type AccessControlEntry struct {
 	Index                   uint16
-	Header                  AccessControlEntryHeader
-	Mask                    AccessControlMask
-	SID                     identity.Identity
+	Header                  header.AccessControlEntryHeader
+	Mask                    mask.AccessControlMask
+	Identity                identity.Identity
 	AccessControlObjectType object.AccessControlObjectType
 
 	// Internal
@@ -45,7 +48,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 	marshalledData = marshalledData[ace.RawBytesSize:ace.Header.Size]
 
 	switch ace.Header.Type.Value {
-	case ACE_TYPE_ACCESS_ALLOWED:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED:
 		// Parsing ACE of type ACCESS_ALLOWED_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/72e7c7ea-bc02-4c74-a619-818a16bf6adb
 
@@ -58,13 +61,13 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
-	case ACE_TYPE_ACCESS_DENIED:
+	case acetype.ACE_TYPE_ACCESS_DENIED:
 		// Parsing ACE of type ACCESS_DENIED_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/b1e1321d-5816-4513-be67-b65d8ae52fe8
 
@@ -77,13 +80,13 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
-	case ACE_TYPE_SYSTEM_AUDIT:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT:
 		// Parsing ACE of type SYSTEM_AUDIT_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/9431fd0f-5b9a-47f0-b3f0-3015e2d0d4f9
 
@@ -96,27 +99,27 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
-	case ACE_TYPE_SYSTEM_ALARM:
+	case acetype.ACE_TYPE_SYSTEM_ALARM:
 		// Parsing ACE of type SYSTEM_ALARM_ACE_TYPE
 		// Source: ?
 
 		// Reserved for future use.
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/628ebb1d-c509-4ea0-a10f-77ef97ca4586
 
-	case ACE_TYPE_ACCESS_ALLOWED_COMPOUND:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_COMPOUND:
 		// Parsing ACE of type ACCESS_ALLOWED_COMPOUND_ACE_TYPE
 		// Source: ?
 
 		// Reserved for future use.
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/628ebb1d-c509-4ea0-a10f-77ef97ca4586
 
-	case ACE_TYPE_ACCESS_ALLOWED_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_OBJECT:
 		// Parsing ACE of type ACCESS_ALLOWED_OBJECT_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/c79a383c-2b3f-4655-abe7-dcbb7ce0cfbe
 
@@ -151,13 +154,13 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// in the Flags member. Otherwise, the InheritedObjectType field is ignored.
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
-	case ACE_TYPE_ACCESS_DENIED_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_DENIED_OBJECT:
 		// Parsing ACE of type ACCESS_DENIED_OBJECT_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/8720fcf3-865c-4557-97b1-0b3489a6c270
 
@@ -192,13 +195,13 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// in the Flags member. Otherwise, the InheritedObjectType field is ignored.
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
-	case ACE_TYPE_SYSTEM_AUDIT_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_OBJECT:
 		// Parsing ACE of type SYSTEM_AUDIT_OBJECT_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/c8da72ae-6b54-4a05-85f4-e2594936d3d5
 
@@ -233,23 +236,23 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// in the Flags member. Otherwise, the InheritedObjectType field is ignored.
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// ApplicationData (variable): Optional application data. The size of the application
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
-	case ACE_TYPE_SYSTEM_ALARM_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_OBJECT:
 		// Parsing ACE of type SYSTEM_ALARM_OBJECT_ACE_TYPE
 		// Source: ?
 
 		// Reserved for future use.
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/628ebb1d-c509-4ea0-a10f-77ef97ca4586
 
-	case ACE_TYPE_ACCESS_ALLOWED_CALLBACK:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK:
 		// Parsing ACE of type ACCESS_ALLOWED_CALLBACK_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/c9579cf4-0f4a-44f1-9444-422dfb10557a
 
@@ -262,9 +265,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -272,7 +275,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case ACE_TYPE_ACCESS_DENIED_CALLBACK:
+	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK:
 		// Parsing ACE of type ACCESS_DENIED_CALLBACK_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/35adad6b-fda5-4cc1-b1b5-9beda5b07d2e
 
@@ -285,9 +288,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -295,7 +298,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT:
 		// Parsing ACE of type ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/fe1838ea-ea34-4a5e-b40e-eb870f8322ae
 
@@ -330,9 +333,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// in the Flags member. Otherwise, the InheritedObjectType field is ignored.
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -340,7 +343,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case ACE_TYPE_ACCESS_DENIED_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK_OBJECT:
 		// Parsing ACE of type ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/4652f211-82d5-4b90-bd58-43bf3b0fc48d
 
@@ -375,9 +378,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// in the Flags member. Otherwise, the InheritedObjectType field is ignored.
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -385,7 +388,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case ACE_TYPE_SYSTEM_AUDIT_CALLBACK:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK:
 		// Parsing ACE of type SYSTEM_AUDIT_CALLBACK_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/bd6b6fd8-4bef-427e-9a43-b9b46457e934
 
@@ -398,9 +401,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -408,7 +411,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case ACE_TYPE_SYSTEM_ALARM_CALLBACK:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK:
 		// Parsing ACE of type SYSTEM_ALARM_CALLBACK_ACE_TYPE
 		// Source: ?
 
@@ -416,7 +419,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/628ebb1d-c509-4ea0-a10f-77ef97ca4586
 		// No parsing required as it is reserved for future use.
 
-	case ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
 		// Parsing ACE of type SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/bd6b6fd8-4bef-427e-9a43-b9b46457e934
 
@@ -451,9 +454,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// in the Flags member. Otherwise, the InheritedObjectType field is ignored.
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -461,7 +464,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case ACE_TYPE_SYSTEM_ALARM_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK_OBJECT:
 		// Parsing ACE of type SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE
 		// Source: ?
 
@@ -469,7 +472,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/628ebb1d-c509-4ea0-a10f-77ef97ca4586
 		// No parsing required as it is reserved for future use.
 
-	case ACE_TYPE_SYSTEM_MANDATORY_LABEL:
+	case acetype.ACE_TYPE_SYSTEM_MANDATORY_LABEL:
 		// Parsing ACE of type SYSTEM_MANDATORY_LABEL_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/25fa6565-6cb0-46ab-a30a-016b32c4939a
 
@@ -482,13 +485,13 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
-	case ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
+	case acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
 		// Parsing ACE of type SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/352944c7-4fb6-4988-8036-0a25dcedc730
 
@@ -501,9 +504,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -511,7 +514,7 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
 		// Parsing ACE of type SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/aa0c0f62-4b4c-44f0-9718-c266a6accd9f
 
@@ -524,9 +527,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		ace.RawBytesSize += uint32(rawBytesSize)
 
 		// Sid (variable): The SID of a trustee. The length of the SID MUST be a multiple of 4.
-		rawBytesSize, err = ace.SID.Unmarshal(marshalledData)
+		rawBytesSize, err = ace.Identity.Unmarshal(marshalledData)
 		if err != nil {
-			return 0, fmt.Errorf("failed to unmarshal SID: %w", err)
+			return 0, fmt.Errorf("failed to unmarshal Identity: %w", err)
 		}
 		ace.RawBytesSize += uint32(rawBytesSize)
 
@@ -554,67 +557,48 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 
 	switch ace.Header.Type.Value {
 
-	case ACE_TYPE_ACCESS_ALLOWED:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_ACCESS_DENIED:
+	case acetype.ACE_TYPE_ACCESS_DENIED:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_SYSTEM_AUDIT:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_SYSTEM_ALARM:
-	case ACE_TYPE_ACCESS_ALLOWED_COMPOUND:
-	case ACE_TYPE_ACCESS_ALLOWED_OBJECT:
-		bytesStream, err = ace.Mask.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
-		}
-		marshalledData = append(marshalledData, bytesStream...)
-
-		bytesStream, err = ace.AccessControlObjectType.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal AccessControlObjectType: %w", err)
-		}
-		marshalledData = append(marshalledData, bytesStream...)
-
-		bytesStream, err = ace.SID.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
-		}
-		marshalledData = append(marshalledData, bytesStream...)
-
-	case ACE_TYPE_ACCESS_DENIED_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_ALARM:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_COMPOUND:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_OBJECT:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
@@ -627,13 +611,13 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_SYSTEM_AUDIT_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_DENIED_OBJECT:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
@@ -646,27 +630,13 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_SYSTEM_ALARM_OBJECT:
-	case ACE_TYPE_ACCESS_ALLOWED_CALLBACK:
-		bytesStream, err = ace.Mask.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
-		}
-		marshalledData = append(marshalledData, bytesStream...)
-
-		bytesStream, err = ace.SID.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
-		}
-		marshalledData = append(marshalledData, bytesStream...)
-
-	case ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_OBJECT:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
@@ -679,27 +649,27 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_ACCESS_DENIED_CALLBACK:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_SYSTEM_ALARM_CALLBACK:
-	case ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
@@ -712,36 +682,69 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_SYSTEM_ALARM_CALLBACK_OBJECT:
-	case ACE_TYPE_SYSTEM_MANDATORY_LABEL:
+	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.Identity.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-		bytesStream, err = ace.SID.Marshal()
+		bytesStream, err = ace.AccessControlObjectType.Marshal()
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SID: %w", err)
+			return nil, fmt.Errorf("failed to marshal AccessControlObjectType: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+		bytesStream, err = ace.Identity.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_MANDATORY_LABEL:
+		bytesStream, err = ace.Mask.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+		bytesStream, err = ace.Identity.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+		bytesStream, err = ace.Mask.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+		bytesStream, err = ace.Identity.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 	}
@@ -781,76 +784,76 @@ func (ace *AccessControlEntry) Describe(indent int) {
 
 	switch ace.Header.Type.Value {
 
-	case ACE_TYPE_ACCESS_ALLOWED:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_ACCESS_DENIED:
+	case acetype.ACE_TYPE_ACCESS_DENIED:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_AUDIT:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_ALARM:
-	case ACE_TYPE_ACCESS_ALLOWED_COMPOUND:
-	case ACE_TYPE_ACCESS_ALLOWED_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_ALARM:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_COMPOUND:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_OBJECT:
 		ace.Mask.Describe(indent + 1)
 		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_ACCESS_DENIED_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_DENIED_OBJECT:
 		ace.Mask.Describe(indent + 1)
 		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_AUDIT_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_OBJECT:
 		ace.Mask.Describe(indent + 1)
 		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_ALARM_OBJECT:
-	case ACE_TYPE_ACCESS_ALLOWED_CALLBACK:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_ACCESS_DENIED_CALLBACK:
+	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT:
-		ace.Mask.Describe(indent + 1)
-		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
-
-	case ACE_TYPE_ACCESS_DENIED_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT:
 		ace.Mask.Describe(indent + 1)
 		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_AUDIT_CALLBACK:
-		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
-
-	case ACE_TYPE_SYSTEM_ALARM_CALLBACK:
-	case ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK_OBJECT:
 		ace.Mask.Describe(indent + 1)
 		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_ALARM_CALLBACK_OBJECT:
-	case ACE_TYPE_SYSTEM_MANDATORY_LABEL:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK:
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.AccessControlObjectType.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 
-	case ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK_OBJECT:
+	case acetype.ACE_TYPE_SYSTEM_MANDATORY_LABEL:
 		ace.Mask.Describe(indent + 1)
-		ace.SID.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
+
+	case acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
+		ace.Mask.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
+
+	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+		ace.Mask.Describe(indent + 1)
+		ace.Identity.Describe(indent + 1)
 	}
 
 	fmt.Printf("%s └─\n", indentPrompt)

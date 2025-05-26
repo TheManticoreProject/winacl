@@ -6,6 +6,7 @@ import (
 
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/identity"
+	"github.com/TheManticoreProject/winacl/sid"
 )
 
 // FindIdentitiesWithExtendedRight finds identities that have a specific extended right.
@@ -15,14 +16,14 @@ import (
 //
 // Returns:
 //   - map[*identity.SID][]string: A map of identities to their matching extended rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithExtendedRight(extendedRightGUID string) map[*identity.SID][]string {
-	identitiesMap := make(map[*identity.SID][]string)
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithExtendedRight(extendedRightGUID string) map[*sid.SID][]string {
+	identitiesMap := make(map[*sid.SID][]string)
 
 	for _, ace := range ntsd.DACL.Entries {
 		matchingRights := make([]string, 0)
 		if strings.EqualFold(ace.AccessControlObjectType.ObjectType.GUID.ToFormatD(), extendedRightGUID) {
 			matchingRights = append(matchingRights, extendedRightGUID)
-			identitiesMap[&ace.SID.SID] = matchingRights
+			identitiesMap[&ace.Identity.SID] = matchingRights
 		}
 	}
 
@@ -36,8 +37,8 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithExtendedRight(extendedRightG
 //
 // Returns:
 //   - map[*identity.SID][]string: A map of identities to their matching extended rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyExtendedRight(extendedRightsGUIDs []string) map[*identity.SID][]string {
-	identitiesMap := make(map[*identity.SID][]string)
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyExtendedRight(extendedRightsGUIDs []string) map[*sid.SID][]string {
+	identitiesMap := make(map[*sid.SID][]string)
 
 	if len(extendedRightsGUIDs) == 0 {
 		return identitiesMap
@@ -51,7 +52,7 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyExtendedRight(extendedRig
 			}
 		}
 		if len(matchingRights) != 0 {
-			identitiesMap[&ace.SID.SID] = matchingRights
+			identitiesMap[&ace.Identity.SID] = matchingRights
 		}
 	}
 
@@ -65,8 +66,8 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyExtendedRight(extendedRig
 //
 // Returns:
 //   - map[*identity.SID][]string: A map of identities to their matching extended rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllExtendedRights(extendedRightsGUIDs []string) map[*identity.SID][]string {
-	identitiesMap := make(map[*identity.SID][]string)
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllExtendedRights(extendedRightsGUIDs []string) map[*sid.SID][]string {
+	identitiesMap := make(map[*sid.SID][]string)
 
 	if len(extendedRightsGUIDs) == 0 {
 		return identitiesMap
@@ -87,7 +88,7 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllExtendedRights(extendedRi
 			}
 		}
 		if allRightsMatched {
-			identitiesMap[&ace.SID.SID] = extendedRightsGUIDs
+			identitiesMap[&ace.Identity.SID] = extendedRightsGUIDs
 		}
 	}
 
@@ -101,14 +102,14 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllExtendedRights(extendedRi
 //
 // Returns:
 //   - map[*identity.SID][]uint32: A map of identities to their matching access mask rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithRight(accessMaskRightValue uint32) map[*identity.SID][]uint32 {
-	identitiesMap := make(map[*identity.SID][]uint32)
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithRight(accessMaskRightValue uint32) map[*sid.SID][]uint32 {
+	identitiesMap := make(map[*sid.SID][]uint32)
 
 	for _, ace := range ntsd.DACL.Entries {
 		matchingRights := make([]uint32, 0)
 		if slices.Contains(ace.Mask.Values, accessMaskRightValue) {
 			matchingRights = append(matchingRights, accessMaskRightValue)
-			identitiesMap[&ace.SID.SID] = matchingRights
+			identitiesMap[&ace.Identity.SID] = matchingRights
 		}
 	}
 
@@ -122,8 +123,8 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithRight(accessMaskRightValue u
 //
 // Returns:
 //   - map[*identity.SID][]uint32: A map of identities to their matching access mask rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyRight(accessMaskRights []uint32) map[*identity.SID][]uint32 {
-	identitiesMap := make(map[*identity.SID][]uint32)
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyRight(accessMaskRights []uint32) map[*sid.SID][]uint32 {
+	identitiesMap := make(map[*sid.SID][]uint32)
 
 	if len(accessMaskRights) == 0 {
 		return identitiesMap
@@ -137,7 +138,7 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyRight(accessMaskRights []
 			}
 		}
 		if len(matchingRights) != 0 {
-			identitiesMap[&ace.SID.SID] = matchingRights
+			identitiesMap[&ace.Identity.SID] = matchingRights
 		}
 	}
 
@@ -151,8 +152,8 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAnyRight(accessMaskRights []
 //
 // Returns:
 //   - map[*identity.SID][]uint32: A map of identities to their matching access mask rights.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllRights(accessMaskRights []uint32) map[*identity.SID][]uint32 {
-	identitiesMap := make(map[*identity.SID][]uint32)
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllRights(accessMaskRights []uint32) map[*sid.SID][]uint32 {
+	identitiesMap := make(map[*sid.SID][]uint32)
 
 	if len(accessMaskRights) == 0 {
 		return identitiesMap
@@ -173,7 +174,7 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllRights(accessMaskRights [
 			}
 		}
 		if allRightsMatched {
-			identitiesMap[&ace.SID.SID] = accessMaskRights
+			identitiesMap[&ace.Identity.SID] = accessMaskRights
 		}
 	}
 
@@ -187,15 +188,15 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithAllRights(accessMaskRights [
 //
 // Returns:
 //   - map[uint32][]*identity.SID: A map of unexpected access mask rights to their corresponding identities.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedRights(expectedRightsToIdentitiesMap map[uint32][]string) map[uint32][]*identity.SID {
-	unexpectedIdentities := map[uint32][]*identity.SID{}
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedRights(expectedRightsToIdentitiesMap map[uint32][]string) map[uint32][]*sid.SID {
+	unexpectedIdentities := map[uint32][]*sid.SID{}
 
 	for specificRight, expectedIdentities := range expectedRightsToIdentitiesMap {
 
 		for id := range ntsd.FindIdentitiesWithRight(specificRight) {
 			if !slices.Contains(expectedIdentities, id.ToString()) {
 				if _, ok := unexpectedIdentities[specificRight]; !ok {
-					unexpectedIdentities[specificRight] = make([]*identity.SID, 0)
+					unexpectedIdentities[specificRight] = make([]*sid.SID, 0)
 				}
 				unexpectedIdentities[specificRight] = append(unexpectedIdentities[specificRight], id)
 			}
@@ -212,15 +213,15 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedRights(expectedRig
 //
 // Returns:
 //   - map[string][]*identity.SID: A map of unexpected extended rights to their corresponding identities.
-func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedExtendedRights(expectedExtendedRightsToIdentitiesMap map[string][]string) map[string][]*identity.SID {
-	unexpectedIdentities := map[string][]*identity.SID{}
+func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedExtendedRights(expectedExtendedRightsToIdentitiesMap map[string][]string) map[string][]*sid.SID {
+	unexpectedIdentities := map[string][]*sid.SID{}
 
 	for specificExtendedRightGUID, expectedIdentities := range expectedExtendedRightsToIdentitiesMap {
 
 		for id := range ntsd.FindIdentitiesWithExtendedRight(specificExtendedRightGUID) {
 			if !slices.Contains(expectedIdentities, id.ToString()) {
 				if _, ok := unexpectedIdentities[specificExtendedRightGUID]; !ok {
-					unexpectedIdentities[specificExtendedRightGUID] = make([]*identity.SID, 0)
+					unexpectedIdentities[specificExtendedRightGUID] = make([]*sid.SID, 0)
 				}
 				unexpectedIdentities[specificExtendedRightGUID] = append(unexpectedIdentities[specificExtendedRightGUID], id)
 			}
@@ -292,4 +293,54 @@ func (ntsd *NtSecurityDescriptor) GetSacl() acl.SystemAccessControlList {
 //   - sacl (acl.SystemAccessControlList): The new SACL field of the NtSecurityDescriptor.
 func (ntsd *NtSecurityDescriptor) SetSacl(sacl acl.SystemAccessControlList) {
 	ntsd.SACL = sacl
+}
+
+// Equal compares two NtSecurityDescriptor instances for equality.
+//
+// Parameters:
+//   - other (*NtSecurityDescriptor): The NtSecurityDescriptor to compare with.
+//
+// Returns:
+//   - bool: True if the NtSecurityDescriptors are equal, false otherwise.
+func (ntsd *NtSecurityDescriptor) Equal(other *NtSecurityDescriptor) bool {
+	if ntsd == nil || other == nil {
+		return ntsd == other
+	}
+
+	// Compare headers
+	if !ntsd.Header.Equal(&other.Header) {
+		return false
+	}
+
+	// Compare Owner SIDs
+	if !ntsd.Owner.SID.Equal(&other.Owner.SID) {
+		return false
+	}
+
+	// Compare Group SIDs
+	if !ntsd.Group.SID.Equal(&other.Group.SID) {
+		return false
+	}
+
+	// Compare DACLs
+	if len(ntsd.DACL.Entries) != len(other.DACL.Entries) {
+		return false
+	}
+	for i := range ntsd.DACL.Entries {
+		if !ntsd.DACL.Entries[i].Equal(&other.DACL.Entries[i]) {
+			return false
+		}
+	}
+
+	// Compare SACLs
+	if len(ntsd.SACL.Entries) != len(other.SACL.Entries) {
+		return false
+	}
+	for i := range ntsd.SACL.Entries {
+		if !ntsd.SACL.Entries[i].Equal(&other.SACL.Entries[i]) {
+			return false
+		}
+	}
+
+	return true
 }

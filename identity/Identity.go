@@ -3,6 +3,8 @@ package identity
 import (
 	"fmt"
 	"strings"
+
+	"github.com/TheManticoreProject/winacl/sid"
 )
 
 // Identity represents a user identity, including its name and associated Security Identifier (SID).
@@ -16,7 +18,7 @@ import (
 //   - RawBytesSize (uint32): The size of the raw byte data.
 type Identity struct {
 	Name string
-	SID  SID
+	SID  sid.SID
 
 	// Internal
 	RawBytes     []byte
@@ -38,7 +40,7 @@ func (identity *Identity) Unmarshal(marshalledData []byte) (int, error) {
 	identity.RawBytesSize += uint32(rawBytesSize)
 
 	sidString := identity.SID.ToString()
-	if name, exists := WellKnownSIDs[sidString]; exists {
+	if name, exists := sid.WellKnownSIDs[sidString]; exists {
 		identity.Name = name
 	}
 
