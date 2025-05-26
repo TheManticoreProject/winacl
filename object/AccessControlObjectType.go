@@ -3,11 +3,13 @@ package object
 import (
 	"fmt"
 	"strings"
+
+	"github.com/TheManticoreProject/winacl/object/flags"
 )
 
 // AccessControlObjectType represents the access control object type.
 type AccessControlObjectType struct {
-	Flags               AccessControlObjectTypeFlags
+	Flags               flags.AccessControlObjectTypeFlags
 	ObjectType          ObjectType
 	InheritedObjectType InheritedObjectType
 
@@ -34,9 +36,9 @@ func (aco *AccessControlObjectType) Unmarshal(rawBytes []byte) (int, error) {
 	aco.RawBytesSize += uint32(rawBytesSize)
 	rawBytes = rawBytes[rawBytesSize:]
 
-	if aco.Flags.Value != ACCESS_CONTROL_OBJECT_TYPE_FLAG_NONE {
+	if aco.Flags.Value != flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_NONE {
 		// Unmarshal OBJECT_TYPE
-		if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
+		if (aco.Flags.Value & flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
 			rawBytesSize, err = aco.ObjectType.Unmarshal(rawBytes)
 			if err != nil {
 				return 0, err
@@ -46,7 +48,7 @@ func (aco *AccessControlObjectType) Unmarshal(rawBytes []byte) (int, error) {
 		}
 
 		// Unmarshal INHERITED_OBJECT_TYPE
-		if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
+		if (aco.Flags.Value & flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
 			rawBytesSize, err = aco.InheritedObjectType.Unmarshal(rawBytes)
 			if err != nil {
 				return 0, err
@@ -72,7 +74,7 @@ func (aco *AccessControlObjectType) Marshal() ([]byte, error) {
 	}
 	marshalledData = append(marshalledData, bytesStream...)
 
-	if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
+	if (aco.Flags.Value & flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) == flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
 		bytesStream, err = aco.ObjectType.Marshal()
 		if err != nil {
 			return nil, err
@@ -80,7 +82,7 @@ func (aco *AccessControlObjectType) Marshal() ([]byte, error) {
 		marshalledData = append(marshalledData, bytesStream...)
 	}
 
-	if (aco.Flags.Value & ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
+	if (aco.Flags.Value & flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT) == flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
 		bytesStream, err = aco.InheritedObjectType.Marshal()
 		if err != nil {
 			return nil, err
@@ -100,17 +102,17 @@ func (aco *AccessControlObjectType) Describe(indent int) {
 
 	fmt.Printf("%s<AccessControlObjectType>\n", indentPrompt)
 
-	if aco.Flags.Value == (ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT | ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) {
+	if aco.Flags.Value == (flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT | flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT) {
 		fmt.Printf("%s │ \x1b[93mFlags\x1b[0m               : \x1b[96m0x%08x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.Flags.Value, aco.Flags.Name)
 		fmt.Printf("%s │ \x1b[93mObjectType\x1b[0m          : \x1b[96m%s\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.ObjectType.GUID.ToFormatD(), aco.ObjectType.GUID.LookupName())
 		fmt.Printf("%s │ \x1b[93mInheritedObjectType\x1b[0m : \x1b[96m%s\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.InheritedObjectType.GUID.ToFormatD(), aco.InheritedObjectType.GUID.LookupName())
-	} else if aco.Flags.Value == ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
+	} else if aco.Flags.Value == flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_INHERITED_OBJECT_TYPE_PRESENT {
 		fmt.Printf("%s │ \x1b[93mFlags\x1b[0m               : \x1b[96m0x%08x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.Flags.Value, aco.Flags.Name)
 		fmt.Printf("%s │ \x1b[93mInheritedObjectType\x1b[0m : \x1b[96m%s\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.InheritedObjectType.GUID.ToFormatD(), aco.InheritedObjectType.GUID.LookupName())
-	} else if aco.Flags.Value == ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
+	} else if aco.Flags.Value == flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_OBJECT_TYPE_PRESENT {
 		fmt.Printf("%s │ \x1b[93mFlags\x1b[0m      : \x1b[96m0x%08x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.Flags.Value, aco.Flags.Name)
 		fmt.Printf("%s │ \x1b[93mObjectType\x1b[0m : \x1b[96m%s\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.ObjectType.GUID.ToFormatD(), aco.ObjectType.GUID.LookupName())
-	} else if aco.Flags.Value == ACCESS_CONTROL_OBJECT_TYPE_FLAG_NONE {
+	} else if aco.Flags.Value == flags.ACCESS_CONTROL_OBJECT_TYPE_FLAG_NONE {
 		fmt.Printf("%s │ \x1b[93mFlags\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.Flags.Value, aco.Flags.Name)
 	} else {
 		fmt.Printf("%s │ \x1b[93mFlags\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aco.Flags.Value, aco.Flags.Name)

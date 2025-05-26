@@ -6,11 +6,12 @@ import (
 
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/identity"
+	"github.com/TheManticoreProject/winacl/securitydescriptor/header"
 )
 
 // NtSecurityDescriptor represents a Windows security descriptor.
 type NtSecurityDescriptor struct {
-	Header NtSecurityDescriptorHeader
+	Header header.NtSecurityDescriptorHeader
 
 	Owner identity.Identity
 	Group identity.Identity
