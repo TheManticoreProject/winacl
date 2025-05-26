@@ -1,6 +1,8 @@
 package acl
 
-import "github.com/TheManticoreProject/winacl/ace"
+import (
+	"github.com/TheManticoreProject/winacl/ace"
+)
 
 // AddEntry adds a new ACE entry to the DiscretionaryAccessControlList.
 //
@@ -14,6 +16,25 @@ func (dacl *DiscretionaryAccessControlList) AddEntry(entry ace.AccessControlEntr
 	dacl.Entries = append(dacl.Entries, entry)
 
 	// Update the header count
+	dacl.Header.AceCount = uint16(len(dacl.Entries))
+}
+
+// RemoveEntry removes an ACE entry from the DiscretionaryAccessControlList.
+//
+// Parameters:
+//   - ace (ace.AccessControlEntry): The ACE entry to remove.
+//
+// Returns:
+//   - None
+func (dacl *DiscretionaryAccessControlList) RemoveEntry(entry ace.AccessControlEntry) {
+	newEntries := []ace.AccessControlEntry{}
+	for _, existingEntry := range dacl.Entries {
+		if !entry.Equal(&existingEntry) {
+			newEntries = append(newEntries, existingEntry)
+		}
+	}
+
+	dacl.Entries = newEntries
 	dacl.Header.AceCount = uint16(len(dacl.Entries))
 }
 

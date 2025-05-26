@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/TheManticoreProject/winacl/acl"
+	"github.com/TheManticoreProject/winacl/acl/revision"
 	"github.com/TheManticoreProject/winacl/identity"
 	"github.com/TheManticoreProject/winacl/sid"
 )
@@ -235,7 +236,7 @@ func (ntsd *NtSecurityDescriptor) FindIdentitiesWithUnexpectedExtendedRights(exp
 //
 // Returns:
 //   - identity.Identity: The Owner field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) GetOwner() identity.Identity {
+func (ntsd *NtSecurityDescriptor) GetOwner() *identity.Identity {
 	return ntsd.Owner
 }
 
@@ -243,7 +244,7 @@ func (ntsd *NtSecurityDescriptor) GetOwner() identity.Identity {
 //
 // Parameters:
 //   - owner (identity.Identity): The new Owner field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) SetOwner(owner identity.Identity) {
+func (ntsd *NtSecurityDescriptor) SetOwner(owner *identity.Identity) {
 	ntsd.Owner = owner
 }
 
@@ -251,7 +252,7 @@ func (ntsd *NtSecurityDescriptor) SetOwner(owner identity.Identity) {
 //
 // Returns:
 //   - identity.Identity: The Group field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) GetGroup() identity.Identity {
+func (ntsd *NtSecurityDescriptor) GetGroup() *identity.Identity {
 	return ntsd.Group
 }
 
@@ -259,7 +260,7 @@ func (ntsd *NtSecurityDescriptor) GetGroup() identity.Identity {
 //
 // Parameters:
 //   - group (identity.Identity): The new Group field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) SetGroup(group identity.Identity) {
+func (ntsd *NtSecurityDescriptor) SetGroup(group *identity.Identity) {
 	ntsd.Group = group
 }
 
@@ -267,7 +268,7 @@ func (ntsd *NtSecurityDescriptor) SetGroup(group identity.Identity) {
 //
 // Returns:
 //   - acl.DiscretionaryAccessControlList: The DACL field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) GetDacl() acl.DiscretionaryAccessControlList {
+func (ntsd *NtSecurityDescriptor) GetDacl() *acl.DiscretionaryAccessControlList {
 	return ntsd.DACL
 }
 
@@ -275,7 +276,7 @@ func (ntsd *NtSecurityDescriptor) GetDacl() acl.DiscretionaryAccessControlList {
 //
 // Parameters:
 //   - dacl (acl.DiscretionaryAccessControlList): The new DACL field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) SetDacl(dacl acl.DiscretionaryAccessControlList) {
+func (ntsd *NtSecurityDescriptor) SetDacl(dacl *acl.DiscretionaryAccessControlList) {
 	ntsd.DACL = dacl
 }
 
@@ -283,7 +284,7 @@ func (ntsd *NtSecurityDescriptor) SetDacl(dacl acl.DiscretionaryAccessControlLis
 //
 // Returns:
 //   - acl.SystemAccessControlList: The SACL field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) GetSacl() acl.SystemAccessControlList {
+func (ntsd *NtSecurityDescriptor) GetSacl() *acl.SystemAccessControlList {
 	return ntsd.SACL
 }
 
@@ -291,7 +292,7 @@ func (ntsd *NtSecurityDescriptor) GetSacl() acl.SystemAccessControlList {
 //
 // Parameters:
 //   - sacl (acl.SystemAccessControlList): The new SACL field of the NtSecurityDescriptor.
-func (ntsd *NtSecurityDescriptor) SetSacl(sacl acl.SystemAccessControlList) {
+func (ntsd *NtSecurityDescriptor) SetSacl(sacl *acl.SystemAccessControlList) {
 	ntsd.SACL = sacl
 }
 
@@ -313,34 +314,76 @@ func (ntsd *NtSecurityDescriptor) Equal(other *NtSecurityDescriptor) bool {
 	}
 
 	// Compare Owner SIDs
-	if !ntsd.Owner.SID.Equal(&other.Owner.SID) {
+	if ntsd.Owner != nil && other.Owner != nil {
+		if !ntsd.Owner.SID.Equal(&other.Owner.SID) {
+			return false
+		}
+	} else if ntsd.Owner != other.Owner {
 		return false
 	}
 
 	// Compare Group SIDs
-	if !ntsd.Group.SID.Equal(&other.Group.SID) {
+	if ntsd.Group != nil && other.Group != nil {
+		if !ntsd.Group.SID.Equal(&other.Group.SID) {
+			return false
+		}
+	} else if ntsd.Group != other.Group {
 		return false
 	}
 
 	// Compare DACLs
-	if len(ntsd.DACL.Entries) != len(other.DACL.Entries) {
-		return false
-	}
-	for i := range ntsd.DACL.Entries {
-		if !ntsd.DACL.Entries[i].Equal(&other.DACL.Entries[i]) {
+	if ntsd.DACL != nil && other.DACL != nil {
+		if len(ntsd.DACL.Entries) != len(other.DACL.Entries) {
 			return false
 		}
+		for i := range ntsd.DACL.Entries {
+			if !ntsd.DACL.Entries[i].Equal(&other.DACL.Entries[i]) {
+				return false
+			}
+		}
+	} else if ntsd.DACL != other.DACL {
+		return false
 	}
 
 	// Compare SACLs
-	if len(ntsd.SACL.Entries) != len(other.SACL.Entries) {
-		return false
-	}
-	for i := range ntsd.SACL.Entries {
-		if !ntsd.SACL.Entries[i].Equal(&other.SACL.Entries[i]) {
+	if ntsd.SACL != nil && other.SACL != nil {
+		if len(ntsd.SACL.Entries) != len(other.SACL.Entries) {
 			return false
 		}
+		for i := range ntsd.SACL.Entries {
+			if !ntsd.SACL.Entries[i].Equal(&other.SACL.Entries[i]) {
+				return false
+			}
+		}
+	} else if ntsd.SACL != other.SACL {
+		return false
 	}
 
 	return true
+}
+
+// NewSecurityDescriptor creates a new NtSecurityDescriptor with initialized fields.
+//
+// Returns:
+//   - *NtSecurityDescriptor: A pointer to the newly created security descriptor.
+func NewSecurityDescriptor() *NtSecurityDescriptor {
+	ntsd := &NtSecurityDescriptor{
+		Owner: &identity.Identity{},
+
+		Group: &identity.Identity{},
+
+		DACL: &acl.DiscretionaryAccessControlList{},
+
+		SACL: &acl.SystemAccessControlList{},
+	}
+
+	ntsd.Header.Revision = 0x01
+
+	ntsd.DACL.Header.Revision.SetRevision(revision.ACL_REVISION_DS)
+	ntsd.DACL.Header.AceCount = 0
+
+	ntsd.SACL.Header.Revision.SetRevision(revision.ACL_REVISION_DS)
+	ntsd.SACL.Header.AceCount = 0
+
+	return ntsd
 }

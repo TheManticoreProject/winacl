@@ -70,14 +70,13 @@ func TestNtSecurityDescriptor_Involution(t *testing.T) {
 }
 
 func TestNtSecurityDescriptor_Unmarshal(t *testing.T) {
-	ntsd := securitydescriptor.NtSecurityDescriptor{}
-	ntsd.Header.Revision = 1
+	ntsd := securitydescriptor.NewSecurityDescriptor()
+
 	ntsd.Header.Control.AddControl(control.NT_SECURITY_DESCRIPTOR_CONTROL_PD)
 	ntsd.Header.Control.AddControl(control.NT_SECURITY_DESCRIPTOR_CONTROL_OD)
 
 	ntsd.Owner.SID.FromString("S-1-5-32-544")
 	ntsd.Group.SID.FromString("S-1-5-32-544")
-
 	ntsd.DACL.Header.Revision.SetRevision(revision.ACL_REVISION_DS)
 
 	a := ace.AccessControlEntry{}
@@ -107,8 +106,6 @@ func TestNtSecurityDescriptor_Unmarshal(t *testing.T) {
 	if err != nil {
 		t.Errorf("error marshalling NTSecurityDescriptor: %s", err)
 	}
-
-	ntsd.Describe(0)
 
 	ntsd2 := &securitydescriptor.NtSecurityDescriptor{}
 	_, err = ntsd2.Unmarshal(binaryNTSecurityDescriptor)
