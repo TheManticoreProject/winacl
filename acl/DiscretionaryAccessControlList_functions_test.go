@@ -70,3 +70,56 @@ func TestDACLAddEntry(t *testing.T) {
 		t.Errorf("Expected second entry index to be 2, got %d", dacl.Entries[1].Index)
 	}
 }
+
+func TestDACLRemoveEntry(t *testing.T) {
+	dacl := acl.DiscretionaryAccessControlList{}
+
+	// Add two entries
+	entry1 := ace.AccessControlEntry{}
+	entry1.Index = 1
+	dacl.AddEntry(entry1)
+
+	entry2 := ace.AccessControlEntry{}
+	entry2.Index = 2
+	dacl.AddEntry(entry2)
+
+	// Verify initial state
+	if len(dacl.Entries) != 2 {
+		t.Errorf("Expected 2 entries initially, got %d", len(dacl.Entries))
+	}
+
+	if dacl.Header.AceCount != 2 {
+		t.Errorf("Expected AceCount of 2 initially, got %d", dacl.Header.AceCount)
+	}
+
+	// Remove first entry
+	dacl.RemoveEntry(entry1)
+
+	// Verify state after removal
+	if len(dacl.Entries) != 1 {
+		t.Errorf("Expected 1 entry after removal, got %d", len(dacl.Entries))
+	}
+
+	if dacl.Header.AceCount != 1 {
+		t.Errorf("Expected AceCount of 1 after removal, got %d", dacl.Header.AceCount)
+	}
+
+	// Verify remaining entry is entry2
+	if !dacl.Entries[0].Equal(&entry2) {
+		t.Error("Expected remaining entry to be entry2")
+	}
+
+	// Try removing non-existent entry
+	nonExistentEntry := ace.AccessControlEntry{}
+	nonExistentEntry.Index = 99
+	dacl.RemoveEntry(nonExistentEntry)
+
+	// Verify state unchanged after attempting to remove non-existent entry
+	if len(dacl.Entries) != 1 {
+		t.Errorf("Expected 1 entry after removing non-existent entry, got %d", len(dacl.Entries))
+	}
+
+	if dacl.Header.AceCount != 1 {
+		t.Errorf("Expected AceCount of 1 after removing non-existent entry, got %d", dacl.Header.AceCount)
+	}
+}

@@ -17,6 +17,23 @@ func (dacl *DiscretionaryAccessControlList) AddEntry(entry ace.AccessControlEntr
 	dacl.Header.AceCount = uint16(len(dacl.Entries))
 }
 
+// RemoveEntry removes an ACE entry from the DiscretionaryAccessControlList.
+//
+// Parameters:
+//   - ace (ace.AccessControlEntry): The ACE entry to remove.
+//
+// Returns:
+//   - None
+func (dacl *DiscretionaryAccessControlList) RemoveEntry(ace ace.AccessControlEntry) {
+	for i, entry := range dacl.Entries {
+		if entry.Equal(&ace) {
+			dacl.Entries = append(dacl.Entries[:i], dacl.Entries[i+1:]...)
+			dacl.Header.AceCount = uint16(len(dacl.Entries))
+			return
+		}
+	}
+}
+
 // ClearEntries removes all ACE entries from the DiscretionaryAccessControlList.
 //
 // Returns:
