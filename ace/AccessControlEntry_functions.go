@@ -49,7 +49,7 @@ func (ace *AccessControlEntry) Equal(other *AccessControlEntry) bool {
 		return false
 	}
 
-	// Compare SID
+	// Compare Identity
 	if !ace.Identity.Equal(&other.Identity) {
 		return false
 	}
