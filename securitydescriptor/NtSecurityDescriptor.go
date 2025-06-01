@@ -133,24 +133,32 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 
 	// Marshal SACL
 	dataSacl := []byte{}
-	if len(ntsd.SACL.Entries) > 0 {
-		dataSacl, err = ntsd.SACL.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal SACL: %w", err)
+	if ntsd.SACL != nil {
+		if len(ntsd.SACL.Entries) > 0 {
+			dataSacl, err = ntsd.SACL.Marshal()
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal SACL: %w", err)
+			}
+			ntsd.Header.OffsetSacl = uint32(offset)
+			offset += len(dataSacl)
 		}
-		ntsd.Header.OffsetSacl = uint32(offset)
-		offset += len(dataSacl)
+	} else {
+		ntsd.Header.OffsetSacl = 0
 	}
 
 	// Marshal DACL
 	dataDacl := []byte{}
-	if len(ntsd.DACL.Entries) > 0 {
-		dataDacl, err = ntsd.DACL.Marshal()
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal DACL: %w", err)
+	if ntsd.DACL != nil {
+		if len(ntsd.DACL.Entries) > 0 {
+			dataDacl, err = ntsd.DACL.Marshal()
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal DACL: %w", err)
+			}
+			ntsd.Header.OffsetDacl = uint32(offset)
+			offset += len(dataDacl)
 		}
-		ntsd.Header.OffsetDacl = uint32(offset)
-		offset += len(dataDacl)
+	} else {
+		ntsd.Header.OffsetDacl = 0
 	}
 
 	// Marshal Owner
