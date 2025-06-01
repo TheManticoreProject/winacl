@@ -218,13 +218,13 @@ func (ntsd *NtSecurityDescriptor) Describe(indent int) {
 
 	ntsd.Header.Describe(indent + 1)
 
-	if ntsd.Header.OffsetOwner != 0 {
+	if ntsd.Owner != nil {
 		fmt.Printf("%s<Owner>\n", strings.Repeat(" │ ", indent+1))
 		ntsd.Owner.Describe(indent + 2)
 		fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
 	}
 
-	if ntsd.Header.OffsetGroup != 0 {
+	if ntsd.Group != nil {
 		fmt.Printf("%s<Group>\n", strings.Repeat(" │ ", indent+1))
 		ntsd.Group.Describe(indent + 2)
 		fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
@@ -232,32 +232,52 @@ func (ntsd *NtSecurityDescriptor) Describe(indent int) {
 
 	if ntsd.Header.OffsetSacl > ntsd.Header.OffsetDacl {
 		// Print DACL
-		if len(ntsd.DACL.Entries) > 0 {
-			ntsd.DACL.Describe(indent + 1)
+		if ntsd.DACL != nil {
+			if len(ntsd.DACL.Entries) > 0 {
+				ntsd.DACL.Describe(indent + 1)
+			} else {
+				fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
+				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
+			}
 		} else {
 			fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
 			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
 		}
 
 		// Print SACL
-		if len(ntsd.SACL.Entries) > 0 {
-			ntsd.SACL.Describe(indent + 1)
+		if ntsd.SACL != nil {
+			if len(ntsd.SACL.Entries) > 0 {
+				ntsd.SACL.Describe(indent + 1)
+			} else {
+				fmt.Printf("%s<SystemAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
+				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
+			}
 		} else {
 			fmt.Printf("%s<SystemAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
 			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
 		}
 	} else {
 		// Print SACL
-		if len(ntsd.SACL.Entries) > 0 {
-			ntsd.SACL.Describe(indent + 1)
+		if ntsd.SACL != nil {
+			if len(ntsd.SACL.Entries) > 0 {
+				ntsd.SACL.Describe(indent + 1)
+			} else {
+				fmt.Printf("%s<SystemAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
+				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
+			}
 		} else {
 			fmt.Printf("%s<SystemAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
 			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
 		}
 
 		// Print DACL
-		if len(ntsd.DACL.Entries) > 0 {
-			ntsd.DACL.Describe(indent + 1)
+		if ntsd.DACL != nil {
+			if len(ntsd.DACL.Entries) > 0 {
+				ntsd.DACL.Describe(indent + 1)
+			} else {
+				fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
+				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
+			}
 		} else {
 			fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
 			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
