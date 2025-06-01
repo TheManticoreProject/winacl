@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// sddlParse parses an SDDL string into its component parts.
+// CutSDDL parses an SDDL string into its component parts.
 //
 // Parameters:
 //   - sddlString (string): The SDDL string to parse.
