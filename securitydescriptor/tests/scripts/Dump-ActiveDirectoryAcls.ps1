@@ -14,9 +14,16 @@ $os = Get-CimInstance Win32_OperatingSystem
 $osKey = "$($os.Caption) - $($os.Version)"
 
 $result = @{
-    $osKey = @{
-        ActiveDirectory = @()
+    Metadata = @{
+        Timestamp = $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        OS = @{
+            OSVersion = $os.Version
+            OSArchitecture = $os.OSArchitecture
+            OSBuild = $os.BuildNumber
+            OSVersionString = $os.VersionString
+        }
     }
+    ActiveDirectory = @()
 }
 
 # -----------------------------
@@ -52,9 +59,10 @@ foreach ($nc in $namingContexts) {
         }
 
         $dn = $res.Properties["distinguishedName"][0]
+        Write-Host $dn
         $sdBytes = $res.Properties["nTSecurityDescriptor"][0]
 
-        $result[$osKey]["ActiveDirectory"] += [PSCustomObject]@{
+        $result["ActiveDirectory"] += [PSCustomObject]@{
             name    = $dn
             hexdata = (Convert-BytesToHex $sdBytes)
         }
@@ -62,10 +70,17 @@ foreach ($nc in $namingContexts) {
 }
 
 # Deterministic ordering
-$result[$osKey]["ActiveDirectory"] =
-    $result[$osKey]["ActiveDirectory"] | Sort-Object name
+$result["ActiveDirectory"] =
+    $result["ActiveDirectory"] | Sort-Object name
 
 # -----------------------------
 # Output JSON
 # -----------------------------
-$result | ConvertTo-Json -Depth 5
+
+$dirPath = Join-Path -Path (Get-Location) -ChildPath $osKey
+if (-not (Test-Path -Path $dirPath -PathType Container)) {
+    New-Item -Path $dirPath -ItemType Directory | Out-Null
+}
+
+$jsonPath = Join-Path -Path $dirPath -ChildPath "ActiveDirectory.json"
+$result | ConvertTo-Json -Depth 5 | Set-Content -Path $jsonPath -Encoding UTF8
