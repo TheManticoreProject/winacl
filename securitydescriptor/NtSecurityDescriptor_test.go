@@ -1,12 +1,12 @@
 package securitydescriptor_test
 
 import (
+	"bytes"
 	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -64,6 +64,8 @@ func TestNtSecurityDescriptor_Involution(t *testing.T) {
 			if err != nil {
 				t.Fatalf("reading %s: %v", filePath, err)
 			}
+			// Strip UTF-8 BOM if present (e.g. from Windows-saved JSON)
+			data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
 
 			// Each file is an object with one or more keys -> []descriptorEntry (e.g. {"ActiveDirectory": [...]} or {"Metadata":..., "LocalFileSystem": [...]})
 			var raw map[string]json.RawMessage
@@ -138,8 +140,8 @@ func TestNtSecurityDescriptor_Involution(t *testing.T) {
 						if !strings.EqualFold(hexdata, hexData2) {
 							t.Errorf("Involution failed: Output of ntsd2.Marshal() is not equal to input hex string")
 						}
-					})
-				}
+					},
+				)
 			}
 		}
 	}
