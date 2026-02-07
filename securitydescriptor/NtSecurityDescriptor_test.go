@@ -18,7 +18,7 @@ import (
 	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
 )
 
-//go:embed tests/datasets/*.json
+//go:embed tests/datasets
 var datasetFiles embed.FS
 
 func TestNtSecurityDescriptor_Involution(t *testing.T) {
@@ -26,32 +26,65 @@ func TestNtSecurityDescriptor_Involution(t *testing.T) {
 		Name    string `json:"name"`
 		Hexdata string `json:"hexdata"`
 	}
-	type datasetFile map[string]map[string][]descriptorEntry
 
-	entries, err := fs.Glob(datasetFiles, "tests/datasets/*.json")
+	// List dataset folders (e.g. "tests/datasets/Windows 10 - 10.0.19041")
+	root := "tests/datasets"
+	dirEntries, err := fs.ReadDir(datasetFiles, root)
 	if err != nil {
-		t.Fatalf("listing dataset files: %v", err)
+		t.Fatalf("listing datasets root: %v", err)
 	}
-	if len(entries) == 0 {
-		t.Fatal("no JSON datasets found in tests/datasets")
+	var datasetDirs []fs.DirEntry
+	for _, e := range dirEntries {
+		if e.IsDir() {
+			datasetDirs = append(datasetDirs, e)
+		}
+	}
+	if len(datasetDirs) == 0 {
+		t.Fatal("no dataset folders found in tests/datasets")
 	}
 
-	for _, name := range entries {
-		data, err := fs.ReadFile(datasetFiles, name)
+	for _, dirEntry := range datasetDirs {
+		datasetName := dirEntry.Name()
+		folderPath := root + "/" + datasetName
+
+		// List JSON files in this folder (one per component)
+		fileEntries, err := fs.ReadDir(datasetFiles, folderPath)
 		if err != nil {
-			t.Fatalf("reading %s: %v", name, err)
+			t.Fatalf("listing folder %s: %v", folderPath, err)
 		}
-		var testdataset datasetFile
-		if err := json.Unmarshal(data, &testdataset); err != nil {
-			t.Fatalf("parsing %s: %v", name, err)
-		}
-		datasetName := strings.TrimSuffix(filepath.Base(name), ".json")
 
-		for environment, byComponent := range testdataset {
-			for sourceComponent, descriptors := range byComponent {
-				for _, tt := range descriptors {
-					tt := tt
-					t.Run(datasetName+"/"+environment+"/"+sourceComponent+"/"+tt.Name, func(t *testing.T) {
+		for _, fileEntry := range fileEntries {
+			if fileEntry.IsDir() || !strings.HasSuffix(fileEntry.Name(), ".json") {
+				continue
+			}
+			componentName := strings.TrimSuffix(fileEntry.Name(), ".json")
+			filePath := folderPath + "/" + fileEntry.Name()
+
+			data, err := fs.ReadFile(datasetFiles, filePath)
+			if err != nil {
+				t.Fatalf("reading %s: %v", filePath, err)
+			}
+
+			// Each file is an object with one or more keys -> []descriptorEntry (e.g. {"ActiveDirectory": [...]} or {"Metadata":..., "LocalFileSystem": [...]})
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal(data, &raw); err != nil {
+				t.Fatalf("parsing %s: %v", filePath, err)
+			}
+			var descriptors []descriptorEntry
+			for _, v := range raw {
+				var candidate []descriptorEntry
+				if err := json.Unmarshal(v, &candidate); err == nil && len(candidate) > 0 {
+					descriptors = candidate
+					break
+				}
+			}
+			if descriptors == nil {
+				continue
+			}
+
+			for _, tt := range descriptors {
+				tt := tt
+				t.Run(datasetName+"/"+componentName+"/"+tt.Name, func(t *testing.T) {
 						hexdata := tt.Hexdata
 						ntsd := &securitydescriptor.NtSecurityDescriptor{}
 						ntsdBytes, err := hex.DecodeString(hexdata)
