@@ -2,6 +2,8 @@
 # Dump-LocalFileSystemAcls.ps1
 # =============================
 
+$component = "LocalFileSystem"
+
 function Convert-BytesToHex {
     param ([byte[]]$Bytes)
     ($Bytes | ForEach-Object { $_.ToString("X2") }) -join ""
@@ -39,7 +41,7 @@ foreach ($root in $roots) {
             $acl = Get-Acl -LiteralPath $_.FullName
             $sdBytes = $acl.GetSecurityDescriptorBinaryForm()
 
-            $result["LocalFileSystem"] += [PSCustomObject]@{
+            $result[$component] += [PSCustomObject]@{
                 name    = $_.FullName -replace "\\", "/"
                 hexdata = (Convert-BytesToHex $sdBytes)
             }
@@ -51,8 +53,8 @@ foreach ($root in $roots) {
 }
 
 # Deterministic ordering
-$result["LocalFileSystem"] =
-    $result["LocalFileSystem"] | Sort-Object name
+$result[$component] =
+    $result[$component] | Sort-Object name
 
 # -----------------------------
 # Output JSON
