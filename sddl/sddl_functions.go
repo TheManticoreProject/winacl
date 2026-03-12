@@ -1,6 +1,8 @@
 package sddl
 
 import (
+	"fmt"
+
 	"github.com/TheManticoreProject/winacl/securitydescriptor"
 )
 
@@ -12,19 +14,8 @@ import (
 // Returns:
 //   - (*securitydescriptor.NtSecurityDescriptor, error): The converted security descriptor and any error that occurred.
 func SDDLtoNtSecurityDescriptor(sddlString string) (*securitydescriptor.NtSecurityDescriptor, error) {
-	ntsd := &securitydescriptor.NtSecurityDescriptor{}
-
-	// ownerSid, groupSid, daclAces, saclAces := sddlCut(sddlString)
-
-	// Unmarshal the Owner
-
-	// Unmarshal the Group
-
-	// Unmarshal the DACL
-
-	// Unmarshal the SACL
-
-	return ntsd, nil
+	_ = sddlString
+	return nil, fmt.Errorf("SDDLtoNtSecurityDescriptor is not yet implemented")
 }
 
 // NtSecurityDescriptortoSDDL converts an NtSecurityDescriptor to an SDDL string.
@@ -35,15 +26,6 @@ func SDDLtoNtSecurityDescriptor(sddlString string) (*securitydescriptor.NtSecuri
 // Returns:
 //   - (string, error): The SDDL string representation and any error that occurred.
 func NtSecurityDescriptortoSDDL(ntsd *securitydescriptor.NtSecurityDescriptor) (string, error) {
-	sddlString := ""
-
-	// Marshal the Owner
-
-	// Marshal the Group
-
-	// Marshal the DACL
-
-	// Marshal the SACL
-
-	return sddlString, nil
+	_ = ntsd
+	return "", fmt.Errorf("NtSecurityDescriptortoSDDL is not yet implemented")
 }
