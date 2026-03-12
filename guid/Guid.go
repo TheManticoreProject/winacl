@@ -82,6 +82,10 @@ func (guid *GUID) Equal(other *GUID) bool {
 // - A pointer to the parsed GUID.
 // - An error if the parsing fails.
 func (guid *GUID) Unmarshal(data []byte) (int, error) {
+	if len(data) < 16 {
+		return 0, fmt.Errorf("GUID unmarshal requires at least 16 bytes, got %d", len(data))
+	}
+
 	guid.A = uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16 | uint32(data[3])<<24
 
 	guid.B = uint16(data[4]) | uint16(data[5])<<8
