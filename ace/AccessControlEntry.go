@@ -39,6 +39,10 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 	}
 	ace.RawBytesSize += uint32(rawBytesSize)
 
+	if ace.Header.Size < 4 {
+		return 0, fmt.Errorf("failed to unmarshal ACE: ace.Header.Size (%d) is less than the minimum ACE header size (4)", ace.Header.Size)
+	}
+
 	if int(ace.Header.Size) > len(marshalledData) {
 		return 0, fmt.Errorf("failed to unmarshal ACE: ace.Header.Size (%d) is greater than the maximum length of marshalledData (%d)", ace.Header.Size, len(marshalledData))
 	}
