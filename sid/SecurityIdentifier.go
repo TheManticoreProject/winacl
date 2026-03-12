@@ -310,12 +310,15 @@ func (sid *SID) Unmarshal(marshalledData []byte) (int, error) {
 
 	if int(sid.RawBytesSize) < len(marshalledData) {
 		// Here we pad the relative identifier bytes to match the expected length of 4 bytes
-		buffer := marshalledData[sid.RawBytesSize:]
-		if len(buffer) < 4 {
-			buffer = append(buffer, make([]byte, 4-len(buffer))...)
+		remaining := marshalledData[sid.RawBytesSize:]
+		actualLen := len(remaining)
+		if actualLen > 4 {
+			actualLen = 4
 		}
+		buffer := make([]byte, 4)
+		copy(buffer, remaining[:actualLen])
 		sid.RelativeIdentifier = binary.LittleEndian.Uint32(buffer)
-		sid.RawBytesSize += uint32(len(buffer))
+		sid.RawBytesSize += uint32(actualLen)
 	}
 
 	return int(sid.RawBytesSize), nil
