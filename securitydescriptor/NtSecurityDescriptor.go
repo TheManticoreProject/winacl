@@ -117,7 +117,7 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 // Returns:
 //   - error: An error if parsing fails, otherwise nil.
 func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error) {
-	return 0, nil
+	return 0, fmt.Errorf("FromSDDLString is not yet implemented")
 }
 
 // Marshal serializes the NtSecurityDescriptor struct into a byte slice.
