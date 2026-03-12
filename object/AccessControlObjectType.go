@@ -29,6 +29,10 @@ type AccessControlObjectType struct {
 func (aco *AccessControlObjectType) Unmarshal(rawBytes []byte) (int, error) {
 	aco.RawBytesSize = 0
 
+	if len(rawBytes) < 4 {
+		return 0, fmt.Errorf("AccessControlObjectType unmarshal requires at least 4 bytes, got %d", len(rawBytes))
+	}
+
 	rawBytesSize, err := aco.Flags.Unmarshal(rawBytes[0:4])
 	if err != nil {
 		return 0, err
