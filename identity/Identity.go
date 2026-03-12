@@ -32,19 +32,18 @@ type Identity struct {
 //   - RawBytes ([]byte): The raw byte data containing the SID information.
 func (identity *Identity) Unmarshal(marshalledData []byte) (int, error) {
 	identity.RawBytes = marshalledData
+	identity.RawBytesSize = 0
 
-	rawBytesSize, err := identity.SID.Unmarshal(marshalledData)
+	_, err := identity.SID.Unmarshal(marshalledData)
 	if err != nil {
 		return 0, err
 	}
-	identity.RawBytesSize += uint32(rawBytesSize)
+	identity.RawBytesSize = identity.SID.RawBytesSize
 
 	sidString := identity.SID.ToString()
 	if name, exists := sid.WellKnownSIDs[sidString]; exists {
 		identity.Name = name
 	}
-
-	identity.RawBytesSize = identity.SID.RawBytesSize
 
 	return int(identity.RawBytesSize), nil
 }
