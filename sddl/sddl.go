@@ -14,6 +14,10 @@ import (
 func CutSDDL(sddlString string) (string, string, []string, []string) {
 	sddlString = strings.TrimSpace(sddlString)
 
+	if len(sddlString) == 0 {
+		return "", "", nil, nil
+	}
+
 	// Match components starting with O:, G:, D:, or S: using regex
 	components := map[string]string{
 		"O:": "",
@@ -24,19 +28,17 @@ func CutSDDL(sddlString string) (string, string, []string, []string) {
 
 	currentComponent := ""
 	k := 0
-	for {
+	for k < len(sddlString) {
 		upperChar := strings.ToUpper(string(sddlString[k]))
-		if (upperChar == "O" || upperChar == "G" || upperChar == "D" || upperChar == "S") && (sddlString[k+1] == ':') {
+		if k+1 < len(sddlString) && (upperChar == "O" || upperChar == "G" || upperChar == "D" || upperChar == "S") && sddlString[k+1] == ':' {
 			currentComponent = sddlString[k : k+2]
-			k += 1
-		} else {
+			k += 2
+			continue
+		}
+		if currentComponent != "" {
 			components[currentComponent] += string(sddlString[k])
 		}
-
 		k++
-		if k >= len(sddlString) {
-			break
-		}
 	}
 
 	daclAces := CutAces(components["D:"])
