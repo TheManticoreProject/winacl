@@ -429,15 +429,13 @@ func (sid *SID) FromString(sidString string) error {
 	sid.SubAuthorities = make([]uint32, 0)
 	// Determine SubAuthorityCount and set SubAuthorities/RID
 	if len(subAuthorities) != 0 {
-		if len(subAuthorities) == 1 {
-			// The last sub-authority is the Relative Identifier (RID)
-			sid.RelativeIdentifier = subAuthorities[len(subAuthorities)-1]
-		} else {
-			// The last sub-authority is the Relative Identifier (RID)
-			sid.RelativeIdentifier = subAuthorities[len(subAuthorities)-1]
-			// The rest are the sub-authorities
+		// The last sub-authority is the Relative Identifier (RID)
+		sid.RelativeIdentifier = subAuthorities[len(subAuthorities)-1]
+		// SubAuthorityCount includes the RID in the binary SID format
+		sid.SubAuthorityCount = uint8(len(subAuthorities))
+		// The rest are the sub-authorities
+		if len(subAuthorities) > 1 {
 			sid.SubAuthorities = subAuthorities[:len(subAuthorities)-1]
-			sid.SubAuthorityCount = uint8(len(subAuthorities))
 		}
 	}
 
