@@ -1,8 +1,6 @@
 package sddl
 
 import (
-	"fmt"
-
 	"github.com/TheManticoreProject/winacl/securitydescriptor"
 )
 
@@ -14,8 +12,12 @@ import (
 // Returns:
 //   - (*securitydescriptor.NtSecurityDescriptor, error): The converted security descriptor and any error that occurred.
 func SDDLtoNtSecurityDescriptor(sddlString string) (*securitydescriptor.NtSecurityDescriptor, error) {
-	_ = sddlString
-	return nil, fmt.Errorf("SDDLtoNtSecurityDescriptor is not yet implemented")
+	ntsd := &securitydescriptor.NtSecurityDescriptor{}
+	_, err := ntsd.FromSDDLString(sddlString)
+	if err != nil {
+		return nil, err
+	}
+	return ntsd, nil
 }
 
 // NtSecurityDescriptortoSDDL converts an NtSecurityDescriptor to an SDDL string.
@@ -26,6 +28,5 @@ func SDDLtoNtSecurityDescriptor(sddlString string) (*securitydescriptor.NtSecuri
 // Returns:
 //   - (string, error): The SDDL string representation and any error that occurred.
 func NtSecurityDescriptortoSDDL(ntsd *securitydescriptor.NtSecurityDescriptor) (string, error) {
-	_ = ntsd
-	return "", fmt.Errorf("NtSecurityDescriptortoSDDL is not yet implemented")
+	return ntsd.ToSDDLString()
 }

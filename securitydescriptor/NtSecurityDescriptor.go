@@ -120,17 +120,6 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 	return int(ntsd.RawBytesSize), nil
 }
 
-// FromSDDLString initializes the NtSecurityDescriptor struct by parsing the SDDL string.
-//
-// Parameters:
-//   - sddlString (string): The SDDL string to be parsed.
-//
-// Returns:
-//   - error: An error if parsing fails, otherwise nil.
-func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error) {
-	return 0, fmt.Errorf("FromSDDLString is not yet implemented")
-}
-
 // Marshal serializes the NtSecurityDescriptor struct into a byte slice.
 //
 // Returns:
