@@ -739,6 +739,19 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
+	case acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
+		bytesStream, err = ace.Mask.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+		bytesStream, err = ace.Identity.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
 	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
