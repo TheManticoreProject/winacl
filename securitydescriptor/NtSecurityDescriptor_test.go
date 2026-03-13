@@ -1,8 +1,12 @@
 package securitydescriptor_test
 
 import (
+	"bytes"
+	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io/fs"
 	"strings"
 	"testing"
 
@@ -14,58 +18,132 @@ import (
 	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
 )
 
+//go:embed tests/datasets
+var datasetFiles embed.FS
+
 func TestNtSecurityDescriptor_Involution(t *testing.T) {
-	// --------------------------------------------------------------------------------------------------------------75a38
-	testNtsdHex := "0100149ccc000000e800000014000000a000000004008c00030000000240140020000c00010100000000000100000000075a38002000000003000000be3b0ef3f09fd111b6030000f80367c1a57a96bfe60dd011a28500aa003049e2010100000000000100000000075a38002000000003000000bf3b0ef3f09fd111b6030000f80367c1a57a96bfe60dd011a28500aa003049e201010000000000010000000002002c000100000000002400ff010f0001050000000000051500000028bb82279261b9fe2474aa5d0002000001050000000000051500000028bb82279261b9fe2474aa5d0002000001050000000000051500000028bb82279261b9fe20000000"
-
-	ntsd := &securitydescriptor.NtSecurityDescriptor{}
-	ntsdBytes, err := hex.DecodeString(testNtsdHex)
-	if err != nil {
-		t.Errorf("Failed to decode testNtsdHex: %v", err)
+	type descriptorEntry struct {
+		Name    string `json:"name"`
+		Hexdata string `json:"hexdata"`
 	}
 
-	_, err = ntsd.Unmarshal(ntsdBytes)
+	// List dataset folders (e.g. "tests/datasets/Windows 10 - 10.0.19041")
+	root := "tests/datasets"
+	dirEntries, err := fs.ReadDir(datasetFiles, root)
 	if err != nil {
-		t.Errorf("Failed to unmarshal NtSecurityDescriptor: %v", err)
+		t.Fatalf("listing datasets root: %v", err)
 	}
-
-	serializedBytes, err := ntsd.Marshal()
-	if err != nil {
-		t.Errorf("Failed to marshal NtSecurityDescriptor: %v", err)
-	}
-	hexData1 := hex.EncodeToString(serializedBytes)
-
-	if !strings.EqualFold(testNtsdHex, hexData1) {
-		minLen := len(hexData1)
-		if len(testNtsdHex) < minLen {
-			minLen = len(testNtsdHex)
+	var datasetDirs []fs.DirEntry
+	for _, e := range dirEntries {
+		if e.IsDir() {
+			datasetDirs = append(datasetDirs, e)
 		}
-		for k := 0; k < minLen; k++ {
-			if hexData1[k] == testNtsdHex[k] {
-				hexData1 = hexData1[:k] + "_" + hexData1[k+1:]
-				testNtsdHex = testNtsdHex[:k] + "_" + testNtsdHex[k+1:]
+	}
+	if len(datasetDirs) == 0 {
+		t.Fatal("no dataset folders found in tests/datasets")
+	}
+
+	for _, dirEntry := range datasetDirs {
+		datasetName := dirEntry.Name()
+		folderPath := root + "/" + datasetName
+
+		// List JSON files in this folder (one per component)
+		fileEntries, err := fs.ReadDir(datasetFiles, folderPath)
+		if err != nil {
+			t.Fatalf("listing folder %s: %v", folderPath, err)
+		}
+
+		for _, fileEntry := range fileEntries {
+			if fileEntry.IsDir() || !strings.HasSuffix(fileEntry.Name(), ".json") {
+				continue
+			}
+			componentName := strings.TrimSuffix(fileEntry.Name(), ".json")
+			filePath := folderPath + "/" + fileEntry.Name()
+
+			data, err := fs.ReadFile(datasetFiles, filePath)
+			if err != nil {
+				t.Fatalf("reading %s: %v", filePath, err)
+			}
+			// Strip UTF-8 BOM if present (e.g. from Windows-saved JSON)
+			data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
+
+			// Each file is an object with one or more keys -> []descriptorEntry (e.g. {"ActiveDirectory": [...]} or {"Metadata":..., "LocalFileSystem": [...]})
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal(data, &raw); err != nil {
+				t.Fatalf("parsing %s: %v", filePath, err)
+			}
+			var descriptors []descriptorEntry
+			for _, v := range raw {
+				var candidate []descriptorEntry
+				if err := json.Unmarshal(v, &candidate); err == nil && len(candidate) > 0 {
+					descriptors = candidate
+					break
+				}
+			}
+			if descriptors == nil {
+				continue
+			}
+
+			for _, tt := range descriptors {
+				tt := tt
+				t.Run(datasetName+"/"+componentName+"/"+tt.Name, func(t *testing.T) {
+						hexdata := tt.Hexdata
+						ntsd := &securitydescriptor.NtSecurityDescriptor{}
+						ntsdBytes, err := hex.DecodeString(hexdata)
+						if err != nil {
+							t.Errorf("Failed to decode hexdata: %v", err)
+							return
+						}
+						_, err = ntsd.Unmarshal(ntsdBytes)
+						if err != nil {
+							t.Errorf("Failed to unmarshal NtSecurityDescriptor: %v", err)
+							return
+						}
+
+						serializedBytes, err := ntsd.Marshal()
+						if err != nil {
+							t.Errorf("Failed to marshal NtSecurityDescriptor: %v", err)
+							return
+						}
+						hexData1 := hex.EncodeToString(serializedBytes)
+
+						if !strings.EqualFold(hexdata, hexData1) {
+							minLen := len(hexData1)
+							if len(hexdata) < minLen {
+								minLen = len(hexdata)
+							}
+							hexdataDisp := hexdata
+							for k := 0; k < minLen; k++ {
+								if hexData1[k] == hexdata[k] {
+									hexData1 = hexData1[:k] + "_" + hexData1[k+1:]
+									hexdataDisp = hexdataDisp[:k] + "_" + hexdataDisp[k+1:]
+								}
+							}
+							fmt.Println("output-:", hexData1)
+							fmt.Println("input--:", hexdataDisp)
+							t.Errorf("NtSecurityDescriptor.Marshal() failed: Output of ntsd.Marshal() is not equal to input hex string")
+						}
+
+						ntsd2 := &securitydescriptor.NtSecurityDescriptor{}
+						_, err = ntsd2.Unmarshal(serializedBytes)
+						if err != nil {
+							t.Errorf("Failed to unmarshal NtSecurityDescriptor: %v", err)
+							return
+						}
+						data2, err := ntsd2.Marshal()
+						if err != nil {
+							t.Errorf("Failed to marshal NtSecurityDescriptor: %v", err)
+							return
+						}
+						hexData2 := hex.EncodeToString(data2)
+
+						if !strings.EqualFold(hexdata, hexData2) {
+							t.Errorf("Involution failed: Output of ntsd2.Marshal() is not equal to input hex string")
+						}
+					},
+				)
 			}
 		}
-
-		fmt.Println("output-:", hexData1)
-		fmt.Println("input--:", testNtsdHex)
-
-		t.Errorf("NtSecurityDescriptor.Marshal() failed: Output of ntsd.Marshal() is not equal to input hex string")
-	}
-
-	ntsd2 := &securitydescriptor.NtSecurityDescriptor{}
-	_, err = ntsd2.Unmarshal(serializedBytes)
-	if err != nil {
-		t.Errorf("Failed to unmarshal NtSecurityDescriptor: %v", err)
-	}
-	data2, err := ntsd2.Marshal()
-	if err != nil {
-		t.Errorf("Failed to marshal NtSecurityDescriptor: %v", err)
-	}
-	hexData2 := hex.EncodeToString(data2)
-
-	if !strings.EqualFold(testNtsdHex, hexData2) {
-		t.Errorf("Involution failed: Output of ntsd2.Marshal() is not equal to input hex string")
 	}
 }
 
