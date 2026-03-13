@@ -31,7 +31,7 @@ import (
 // Returns:
 //   - (int, error): Always returns 0 for the int value, and an error if parsing fails.
 func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error) {
-	ownerStr, groupStr, daclAces, saclAces := cutSDDL(sddlString)
+	ownerStr, groupStr, daclFlags, daclAces, saclFlags, saclAces := cutSDDL(sddlString)
 
 	ntsd.Header.Revision = 1
 
@@ -56,10 +56,14 @@ func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error)
 	}
 
 	// Parse DACL
-	if len(daclAces) > 0 {
-		entries, err := sddlParseACL(daclAces)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse DACL: %w", err)
+	if len(daclAces) > 0 || daclFlags != "" {
+		var entries []ntsd_ace.AccessControlEntry
+		if len(daclAces) > 0 {
+			var err error
+			entries, err = sddlParseACL(daclAces)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse DACL: %w", err)
+			}
 		}
 		ntsd.DACL = &acl.DiscretionaryAccessControlList{
 			Header:  acl.DiscretionaryAccessControlListHeader{},
@@ -68,13 +72,26 @@ func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error)
 		ntsd.DACL.Header.Revision.Value = sddlGetACLRevision(entries)
 		ntsd.DACL.Header.AceCount = uint16(len(entries))
 		ntsd.Header.Control.RawValue |= control.NT_SECURITY_DESCRIPTOR_CONTROL_DP
+
+		// Parse DACL flags
+		if daclFlags != "" {
+			controlBits, err := sddlParseACLFlags(daclFlags, true)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse DACL flags '%s': %w", daclFlags, err)
+			}
+			ntsd.Header.Control.RawValue |= controlBits
+		}
 	}
 
 	// Parse SACL
-	if len(saclAces) > 0 {
-		entries, err := sddlParseACL(saclAces)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse SACL: %w", err)
+	if len(saclAces) > 0 || saclFlags != "" {
+		var entries []ntsd_ace.AccessControlEntry
+		if len(saclAces) > 0 {
+			var err error
+			entries, err = sddlParseACL(saclAces)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse SACL: %w", err)
+			}
 		}
 		ntsd.SACL = &acl.SystemAccessControlList{
 			Header:  acl.SystemAccessControlListHeader{},
@@ -83,6 +100,15 @@ func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error)
 		ntsd.SACL.Header.Revision.Value = sddlGetACLRevision(entries)
 		ntsd.SACL.Header.AceCount = uint16(len(entries))
 		ntsd.Header.Control.RawValue |= control.NT_SECURITY_DESCRIPTOR_CONTROL_SP
+
+		// Parse SACL flags
+		if saclFlags != "" {
+			controlBits, err := sddlParseACLFlags(saclFlags, false)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse SACL flags '%s': %w", saclFlags, err)
+			}
+			ntsd.Header.Control.RawValue |= controlBits
+		}
 	}
 
 	// Set self-relative flag
@@ -113,6 +139,7 @@ func (ntsd *NtSecurityDescriptor) ToSDDLString() (string, error) {
 	// DACL
 	if ntsd.DACL != nil {
 		sb.WriteString("D:")
+		sb.WriteString(sddlACLFlagsToString(ntsd.Header.Control.RawValue, true))
 		for _, entry := range ntsd.DACL.Entries {
 			aceStr, err := sddlACEToString(&entry)
 			if err != nil {
@@ -127,6 +154,7 @@ func (ntsd *NtSecurityDescriptor) ToSDDLString() (string, error) {
 	// SACL
 	if ntsd.SACL != nil {
 		sb.WriteString("S:")
+		sb.WriteString(sddlACLFlagsToString(ntsd.Header.Control.RawValue, false))
 		for _, entry := range ntsd.SACL.Entries {
 			aceStr, err := sddlACEToString(&entry)
 			if err != nil {
@@ -143,10 +171,11 @@ func (ntsd *NtSecurityDescriptor) ToSDDLString() (string, error) {
 
 // cutSDDL parses an SDDL string into its component parts.
 // This is a local copy to avoid circular imports with the sddl package.
-func cutSDDL(sddlString string) (string, string, []string, []string) {
+// Returns: owner, group, daclFlags, daclAces, saclFlags, saclAces
+func cutSDDL(sddlString string) (string, string, string, []string, string, []string) {
 	sddlString = strings.TrimSpace(sddlString)
 	if len(sddlString) == 0 {
-		return "", "", nil, nil
+		return "", "", "", nil, "", nil
 	}
 
 	components := map[string]string{
@@ -161,8 +190,6 @@ func cutSDDL(sddlString string) (string, string, []string, []string) {
 	for k < len(sddlString) {
 		upperChar := strings.ToUpper(string(sddlString[k]))
 		if k+1 < len(sddlString) && (upperChar == "O" || upperChar == "G" || upperChar == "D" || upperChar == "S") && sddlString[k+1] == ':' {
-			currentComponent = strings.ToUpper(sddlString[k:k+2]) + ""
-			// Normalize to uppercase for map lookup
 			currentComponent = upperChar + ":"
 			k += 2
 			continue
@@ -173,20 +200,23 @@ func cutSDDL(sddlString string) (string, string, []string, []string) {
 		k++
 	}
 
-	daclAces := cutAces(components["D:"])
-	saclAces := cutAces(components["S:"])
+	daclFlags, daclAces := cutAces(components["D:"])
+	saclFlags, saclAces := cutAces(components["S:"])
 
-	return components["O:"], components["G:"], daclAces, saclAces
+	return components["O:"], components["G:"], daclFlags, daclAces, saclFlags, saclAces
 }
 
-// cutAces extracts individual ACE strings from a DACL/SACL component.
-func cutAces(aclStr string) []string {
+// cutAces extracts the ACL flags prefix and individual ACE strings from a DACL/SACL component.
+func cutAces(aclStr string) (string, []string) {
 	var aces []string
 
 	start := strings.Index(aclStr, "(")
 	if start == -1 {
-		return aces
+		// No ACEs; everything is flags (or empty)
+		return strings.TrimSpace(aclStr), aces
 	}
+
+	aclFlags := strings.TrimSpace(aclStr[:start])
 
 	depth := 0
 	aceStart := start
@@ -205,7 +235,7 @@ func cutAces(aclStr string) []string {
 		}
 	}
 
-	return aces
+	return aclFlags, aces
 }
 
 // sddlParseSID parses a SID from an SDDL string (abbreviation or full SID).
@@ -334,6 +364,10 @@ func sddlParseACEFlags(s string) (uint8, error) {
 		return 0, nil
 	}
 
+	if len(s)%2 != 0 {
+		return 0, fmt.Errorf("invalid ACE flags string (odd length): %s", s)
+	}
+
 	var result uint8
 	for i := 0; i+1 < len(s); i += 2 {
 		abbrev := s[i : i+2]
@@ -359,6 +393,10 @@ func sddlParseRights(s string) (uint32, error) {
 			return 0, fmt.Errorf("invalid hex rights value: %s", s)
 		}
 		return uint32(val), nil
+	}
+
+	if len(s)%2 != 0 {
+		return 0, fmt.Errorf("invalid rights string (odd length): %s", s)
 	}
 
 	var result uint32
@@ -400,8 +438,10 @@ func sddlACEToString(ace *ntsd_ace.AccessControlEntry) (string, error) {
 		parts[4] = ace.AccessControlObjectType.InheritedObjectType.GUID.ToFormatD()
 	}
 
-	// Account SID
-	parts[5] = sddlSIDToString(&ace.Identity.SID)
+	// Account SID (only emit if the SID is initialized)
+	if ace.Identity.SID.RevisionLevel != 0 {
+		parts[5] = sddlSIDToString(&ace.Identity.SID)
+	}
 
 	return strings.Join(parts[:], ";"), nil
 }
@@ -526,6 +566,86 @@ func sddlRightsToString(maskVal uint32, aceType uint8) string {
 
 	if remaining != 0 {
 		sb.WriteString(fmt.Sprintf("0x%08x", remaining))
+	}
+
+	return sb.String()
+}
+
+// sddlParseACLFlags parses SDDL ACL flags (P, AI, AR, NO_ACCESS_CONTROL) into control bits.
+// isDACL determines whether the flags apply to the DACL or SACL.
+func sddlParseACLFlags(s string, isDACL bool) (uint16, error) {
+	var result uint16
+	i := 0
+	for i < len(s) {
+		remaining := s[i:]
+		matched := false
+
+		// Try two-character flags first
+		if len(remaining) >= 2 {
+			twoChar := strings.ToUpper(remaining[:2])
+			switch twoChar {
+			case "AI":
+				if isDACL {
+					result |= control.NT_SECURITY_DESCRIPTOR_CONTROL_DI
+				} else {
+					result |= control.NT_SECURITY_DESCRIPTOR_CONTROL_SI
+				}
+				i += 2
+				matched = true
+			case "AR":
+				if isDACL {
+					result |= control.NT_SECURITY_DESCRIPTOR_CONTROL_DC
+				} else {
+					result |= control.NT_SECURITY_DESCRIPTOR_CONTROL_SC
+				}
+				i += 2
+				matched = true
+			}
+		}
+
+		if !matched {
+			oneChar := strings.ToUpper(remaining[:1])
+			switch oneChar {
+			case "P":
+				if isDACL {
+					result |= control.NT_SECURITY_DESCRIPTOR_CONTROL_PD
+				} else {
+					result |= control.NT_SECURITY_DESCRIPTOR_CONTROL_PS
+				}
+				i++
+			default:
+				return 0, fmt.Errorf("unknown ACL flag at position %d: %s", i, remaining)
+			}
+		}
+	}
+	return result, nil
+}
+
+// sddlACLFlagsToString converts control bits to SDDL ACL flags string.
+// isDACL determines whether to check DACL or SACL control bits.
+func sddlACLFlagsToString(controlVal uint16, isDACL bool) string {
+	var sb strings.Builder
+
+	if isDACL {
+		if controlVal&control.NT_SECURITY_DESCRIPTOR_CONTROL_PD != 0 {
+			sb.WriteString("P")
+		}
+		if controlVal&control.NT_SECURITY_DESCRIPTOR_CONTROL_DI != 0 {
+			sb.WriteString("AI")
+		}
+		if controlVal&control.NT_SECURITY_DESCRIPTOR_CONTROL_DC != 0 {
+			sb.WriteString("AR")
+		}
+	} else {
+		if controlVal&control.NT_SECURITY_DESCRIPTOR_CONTROL_PS != 0 {
+			sb.WriteString("P")
+		}
+		if controlVal&control.NT_SECURITY_DESCRIPTOR_CONTROL_SI != 0 {
+			sb.WriteString("AI")
+		}
+		if controlVal&control.NT_SECURITY_DESCRIPTOR_CONTROL_SC != 0 {
+			sb.WriteString("AR")
+		}
 	}
 
 	return sb.String()

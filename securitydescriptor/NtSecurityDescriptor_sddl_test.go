@@ -5,6 +5,7 @@ import (
 
 	"github.com/TheManticoreProject/winacl/ace/acetype"
 	"github.com/TheManticoreProject/winacl/object/flags"
+	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
 )
 
 func TestFromSDDLString_BasicOwnerGroup(t *testing.T) {
@@ -314,6 +315,153 @@ func TestFromSDDLString_MarshalRoundTrip(t *testing.T) {
 
 	if output != input {
 		t.Errorf("SDDL->Binary->SDDL round-trip failed:\n  input:  %s\n  output: %s", input, output)
+	}
+}
+
+func TestFromSDDLString_OddLengthFlagsError(t *testing.T) {
+	ntsd := NtSecurityDescriptor{}
+	_, err := ntsd.FromSDDLString("D:(A;OIC;GA;;;WD)")
+	if err == nil {
+		t.Fatal("expected error for odd-length ACE flags string 'OIC', got nil")
+	}
+}
+
+func TestFromSDDLString_OddLengthRightsError(t *testing.T) {
+	ntsd := NtSecurityDescriptor{}
+	_, err := ntsd.FromSDDLString("D:(A;;GAR;;;WD)")
+	if err == nil {
+		t.Fatal("expected error for odd-length rights string 'GAR', got nil")
+	}
+}
+
+func TestFromSDDLString_ACLFlags(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		checkDACL bool
+		checkSACL bool
+		wantPD    bool // DACL Protected
+		wantDI    bool // DACL Auto-Inherited
+		wantDC    bool // DACL Auto-Inherit Required
+		wantPS    bool // SACL Protected
+		wantSI    bool // SACL Auto-Inherited
+		wantSC    bool // SACL Auto-Inherit Required
+	}{
+		{
+			name:      "DACL Protected",
+			input:     "D:P(A;;GA;;;WD)",
+			checkDACL: true,
+			wantPD:    true,
+		},
+		{
+			name:      "DACL Auto-Inherited",
+			input:     "D:AI(A;;GA;;;WD)",
+			checkDACL: true,
+			wantDI:    true,
+		},
+		{
+			name:      "DACL Protected and Auto-Inherited",
+			input:     "D:PAI(A;;GA;;;WD)",
+			checkDACL: true,
+			wantPD:    true,
+			wantDI:    true,
+		},
+		{
+			name:      "DACL Auto-Inherit Required",
+			input:     "D:AR(A;;GA;;;WD)",
+			checkDACL: true,
+			wantDC:    true,
+		},
+		{
+			name:      "SACL Protected",
+			input:     "S:P(AU;SAFA;GA;;;WD)",
+			checkSACL: true,
+			wantPS:    true,
+		},
+		{
+			name:      "SACL Auto-Inherited",
+			input:     "S:AI(AU;SAFA;GA;;;WD)",
+			checkSACL: true,
+			wantSI:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ntsd := NtSecurityDescriptor{}
+			_, err := ntsd.FromSDDLString(tt.input)
+			if err != nil {
+				t.Fatalf("FromSDDLString(%s) error = %v", tt.input, err)
+			}
+
+			ctrl := ntsd.Header.Control.RawValue
+
+			if tt.wantPD && ctrl&control.NT_SECURITY_DESCRIPTOR_CONTROL_PD == 0 {
+				t.Error("expected DACL Protected (PD) control bit to be set")
+			}
+			if tt.wantDI && ctrl&control.NT_SECURITY_DESCRIPTOR_CONTROL_DI == 0 {
+				t.Error("expected DACL Auto-Inherited (DI) control bit to be set")
+			}
+			if tt.wantDC && ctrl&control.NT_SECURITY_DESCRIPTOR_CONTROL_DC == 0 {
+				t.Error("expected DACL Auto-Inherit Required (DC) control bit to be set")
+			}
+			if tt.wantPS && ctrl&control.NT_SECURITY_DESCRIPTOR_CONTROL_PS == 0 {
+				t.Error("expected SACL Protected (PS) control bit to be set")
+			}
+			if tt.wantSI && ctrl&control.NT_SECURITY_DESCRIPTOR_CONTROL_SI == 0 {
+				t.Error("expected SACL Auto-Inherited (SI) control bit to be set")
+			}
+			if tt.wantSC && ctrl&control.NT_SECURITY_DESCRIPTOR_CONTROL_SC == 0 {
+				t.Error("expected SACL Auto-Inherit Required (SC) control bit to be set")
+			}
+		})
+	}
+}
+
+func TestRoundTrip_ACLFlags(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "DACL Protected",
+			input: "D:P(A;;GA;;;WD)",
+		},
+		{
+			name:  "DACL Auto-Inherited",
+			input: "D:AI(A;;GA;;;WD)",
+		},
+		{
+			name:  "DACL Protected and Auto-Inherited",
+			input: "D:PAI(A;;GA;;;WD)",
+		},
+		{
+			name:  "SACL Protected and Auto-Inherited",
+			input: "S:PAI(AU;SAFA;GA;;;WD)",
+		},
+		{
+			name:  "Both DACL and SACL flags",
+			input: "D:PAI(A;;GA;;;WD)S:AI(AU;SAFA;GA;;;WD)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ntsd := NtSecurityDescriptor{}
+			_, err := ntsd.FromSDDLString(tt.input)
+			if err != nil {
+				t.Fatalf("FromSDDLString(%s) error = %v", tt.input, err)
+			}
+
+			output, err := ntsd.ToSDDLString()
+			if err != nil {
+				t.Fatalf("ToSDDLString() error = %v", err)
+			}
+
+			if output != tt.input {
+				t.Errorf("Round-trip failed:\n  input:  %s\n  output: %s", tt.input, output)
+			}
+		})
 	}
 }
 
