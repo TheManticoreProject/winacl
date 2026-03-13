@@ -36,11 +36,14 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 	ntsd.RawBytesSize = 0
 
 	// Unmarshal the header
-	rawBytesSize, err := ntsd.Header.Unmarshal(marshalledData)
+	_, err := ntsd.Header.Unmarshal(marshalledData)
 	if err != nil {
 		return 0, err
 	}
-	ntsd.RawBytesSize += uint32(rawBytesSize)
+	// Track the maximum extent (offset + component size) across all components,
+	// since components are placed at specific offsets within the buffer rather
+	// than sequentially.
+	ntsd.RawBytesSize = 20 // header size
 
 	// Unmarshal Owner if present
 	if ntsd.Header.OffsetOwner != 0 {
@@ -52,7 +55,9 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 			if err != nil {
 				return 0, fmt.Errorf("failed to unmarshal Owner: %w", err)
 			}
-			ntsd.RawBytesSize += uint32(rawBytesSize)
+			if end := ntsd.Header.OffsetOwner + uint32(rawBytesSize); end > ntsd.RawBytesSize {
+				ntsd.RawBytesSize = end
+			}
 		} else {
 			return 0, fmt.Errorf("failed to unmarshal Owner: offset is out of bounds OffsetOwner=%d, RawBytesSize=%d", ntsd.Header.OffsetOwner, ntsd.RawBytesSize)
 		}
@@ -68,7 +73,9 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 			if err != nil {
 				return 0, fmt.Errorf("failed to unmarshal Group: %w", err)
 			}
-			ntsd.RawBytesSize += uint32(rawBytesSize)
+			if end := ntsd.Header.OffsetGroup + uint32(rawBytesSize); end > ntsd.RawBytesSize {
+				ntsd.RawBytesSize = end
+			}
 		} else {
 			return 0, fmt.Errorf("failed to unmarshal Group: offset is out of bounds OffsetGroup=%d, RawBytesSize=%d", ntsd.Header.OffsetGroup, ntsd.RawBytesSize)
 		}
@@ -84,7 +91,9 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 			if err != nil {
 				return 0, fmt.Errorf("failed to unmarshal DACL: %w", err)
 			}
-			ntsd.RawBytesSize += uint32(rawBytesSize)
+			if end := ntsd.Header.OffsetDacl + uint32(rawBytesSize); end > ntsd.RawBytesSize {
+				ntsd.RawBytesSize = end
+			}
 		} else {
 			return 0, fmt.Errorf("failed to unmarshal DACL: offset is out of bounds OffsetDacl=%d, RawBytesSize=%d", ntsd.Header.OffsetDacl, ntsd.RawBytesSize)
 		}
@@ -100,7 +109,9 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 			if err != nil {
 				return 0, fmt.Errorf("failed to unmarshal SACL: %w", err)
 			}
-			ntsd.RawBytesSize += uint32(rawBytesSize)
+			if end := ntsd.Header.OffsetSacl + uint32(rawBytesSize); end > ntsd.RawBytesSize {
+				ntsd.RawBytesSize = end
+			}
 		} else {
 			return 0, fmt.Errorf("failed to unmarshal SACL: offset is out of bounds OffsetSacl=%d, RawBytesSize=%d", ntsd.Header.OffsetSacl, ntsd.RawBytesSize)
 		}
