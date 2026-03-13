@@ -346,17 +346,8 @@ func (sid *SID) Marshal() ([]byte, error) {
 	}
 	marshalledData = append(marshalledData, identifierBytes...)
 
-	// Add each sub-authority (4 bytes each, little-endian) up to the point where all remaining sub-authorities are 0
-	lastNullSubAuthorityIndex := len(sid.SubAuthorities)
-	for i := len(sid.SubAuthorities) - 1; i >= 0; i-- {
-		if sid.SubAuthorities[i] != 0 {
-			lastNullSubAuthorityIndex = i + 1
-			break
-		}
-	}
-
 	// Add each sub-authority (4 bytes each, little-endian)
-	for k := 0; k < lastNullSubAuthorityIndex; k++ {
+	for k := 0; k < len(sid.SubAuthorities); k++ {
 		var buf [4]byte
 		binary.LittleEndian.PutUint32(buf[:], sid.SubAuthorities[k])
 		marshalledData = append(marshalledData, buf[:]...)
