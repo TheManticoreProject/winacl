@@ -546,7 +546,11 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		return 0, fmt.Errorf("unknown ACE type: %d", ace.Header.Type.Value)
 	}
 
-	return int(ace.RawBytesSize), nil
+	// Return the full ACE size from the header, not just the bytes we parsed.
+	// ACE types with ApplicationData (callback, resource attribute, scoped policy)
+	// have trailing data beyond what we explicitly parse, and the caller needs
+	// the full size to correctly advance to the next ACE.
+	return int(ace.Header.Size), nil
 }
 
 // Marshal serializes the AccessControlEntry struct into a byte slice.
