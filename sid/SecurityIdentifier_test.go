@@ -344,3 +344,56 @@ func Test_SID_ToString(t *testing.T) {
 		t.Errorf("ToString() failed: expected %s, got %s", "S-1-16-49152", sid.ToString())
 	}
 }
+
+// Test_SID_Marshal_ZeroRID verifies that SIDs whose RID is zero still emit the
+// full 8 + 4*SubAuthorityCount binary layout mandated by MS-DTYP 2.4.2. This
+// covers well-known SIDs such as S-1-1-0 (Everyone), S-1-0-0 (Nobody), and
+// S-1-3-0 (Creator Owner).
+func Test_SID_Marshal_ZeroRID(t *testing.T) {
+	cases := []struct {
+		sidString string
+		expected  string
+	}{
+		{"S-1-1-0", "010100000000000100000000"}, // Everyone
+		{"S-1-0-0", "010100000000000000000000"}, // Nobody
+		{"S-1-3-0", "010100000000000300000000"}, // Creator Owner
+	}
+	for _, tc := range cases {
+		t.Run(tc.sidString, func(t *testing.T) {
+			s := &sid.SID{}
+			if err := s.FromString(tc.sidString); err != nil {
+				t.Fatalf("FromString(%s) error = %v", tc.sidString, err)
+			}
+			got, err := s.Marshal()
+			if err != nil {
+				t.Fatalf("Marshal() error = %v", err)
+			}
+			if hex.EncodeToString(got) != tc.expected {
+				t.Errorf("Marshal(%s) = %s, want %s", tc.sidString, hex.EncodeToString(got), tc.expected)
+			}
+			expectedLen := 8 + 4*int(s.SubAuthorityCount)
+			if len(got) != expectedLen {
+				t.Errorf("Marshal(%s) length = %d, want %d (per 8 + 4*SubAuthorityCount)", tc.sidString, len(got), expectedLen)
+			}
+		})
+	}
+}
+
+// Test_SID_UnmarshalMarshal_ZeroRID verifies that parsing a genuine 12-byte
+// binary for a zero-RID SID and re-marshalling preserves the exact bytes.
+func Test_SID_UnmarshalMarshal_ZeroRID(t *testing.T) {
+	// Windows binary for S-1-1-0 (Everyone): rev=1, SAC=1, auth=1, RID=0
+	raw, _ := hex.DecodeString("010100000000000100000000")
+	s := &sid.SID{}
+	if _, err := s.Unmarshal(raw); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	got, err := s.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	if !bytes.Equal(raw, got) {
+		t.Errorf("Unmarshal then Marshal did not round-trip: got %s, want %s",
+			hex.EncodeToString(got), hex.EncodeToString(raw))
+	}
+}

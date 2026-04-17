@@ -353,8 +353,10 @@ func (sid *SID) Marshal() ([]byte, error) {
 		marshalledData = append(marshalledData, buf[:]...)
 	}
 
-	if sid.RelativeIdentifier != 0 {
-		// Add the Relative Identifier (4 bytes, little-endian)
+	// The RID is the last sub-authority and must be serialized whenever the
+	// model indicates one exists (SubAuthorityCount > len(SubAuthorities)),
+	// including when its value is zero (e.g. S-1-1-0, S-1-0-0, S-1-3-0).
+	if uint8(len(sid.SubAuthorities)) < sid.SubAuthorityCount {
 		relativeIdentifierBytes := make([]byte, 4)
 		binary.LittleEndian.PutUint32(relativeIdentifierBytes, sid.RelativeIdentifier)
 		marshalledData = append(marshalledData, relativeIdentifierBytes...)
