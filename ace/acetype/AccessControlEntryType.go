@@ -1,5 +1,7 @@
 package acetype
 
+import "fmt"
+
 const (
 	ACE_TYPE_ACCESS_ALLOWED                 uint8 = 0x00 // Access-allowed ACE that uses the ACCESS_ALLOWED_ACE (section 2.4.4.2) structure.
 	ACE_TYPE_ACCESS_DENIED                  uint8 = 0x01 // Access-denied ACE that uses the ACCESS_DENIED_ACE (section 2.4.4.4) structure.
@@ -77,6 +79,10 @@ var AccessControlEntryTypeValueToName = map[uint8]string{
 //     representing the ACE type. This data is typically defined by the Windows
 //     model and indicates the type of access control entry.
 func (acetype *AccessControlEntryType) Unmarshal(marshalledData []byte) (int, error) {
+	if len(marshalledData) < 1 {
+		return 0, fmt.Errorf("AccessControlEntryType unmarshal requires at least 1 byte, got %d", len(marshalledData))
+	}
+
 	// Set the value of the ACE type
 	acetype.Value = uint8(marshalledData[0])
 
