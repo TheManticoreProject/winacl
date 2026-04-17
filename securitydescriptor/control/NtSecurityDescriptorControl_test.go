@@ -78,3 +78,17 @@ func TestNtSecurityDescriptorControl_Marshal(t *testing.T) {
 		t.Errorf("Expected deserialized value to be 0x%04x, but got 0x%04x", uintValue, deserializedValue)
 	}
 }
+
+// TestNtSecurityDescriptorControl_Unmarshal_TruncatedReturnsError is a
+// regression test for issue #30: parsers must return a parse error on
+// truncated input instead of panicking.
+func TestNtSecurityDescriptorControl_Unmarshal_TruncatedReturnsError(t *testing.T) {
+	for _, n := range []int{0, 1} {
+		buf := make([]byte, n)
+		c := &control.NtSecurityDescriptorControl{}
+		_, err := c.Unmarshal(buf)
+		if err == nil {
+			t.Errorf("Unmarshal(%d bytes) expected error, got nil", n)
+		}
+	}
+}

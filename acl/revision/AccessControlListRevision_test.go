@@ -50,6 +50,17 @@ func TestAccessControlListRevisionUnmarshal(t *testing.T) {
 	}
 }
 
+// TestAccessControlListRevisionUnmarshal_EmptyReturnsError is a regression test
+// for issue #30: parsers must return an error on truncated input instead of
+// panicking with "index out of range".
+func TestAccessControlListRevisionUnmarshal_EmptyReturnsError(t *testing.T) {
+	aclrev := revision.AccessControlListRevision{}
+	_, err := aclrev.Unmarshal([]byte{})
+	if err == nil {
+		t.Fatal("expected an error for empty input, got nil")
+	}
+}
+
 func TestAccessControlListRevisionMarshal(t *testing.T) {
 	tests := []struct {
 		name     string

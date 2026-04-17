@@ -1,6 +1,9 @@
 package aceflags
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // https://learn.microsoft.com/en-us/dotnet/api/system.security.accesscontrol.aceflags?view=net-8.0
 const (
@@ -76,6 +79,9 @@ var AccessControlEntryFlagToName = map[uint8]string{
 //     model and determines the permissions or behavior associated with the
 //     flag.
 func (aceflag *AccessControlEntryFlag) Unmarshal(marshalledData []byte) (int, error) {
+	if len(marshalledData) < 1 {
+		return 0, fmt.Errorf("AccessControlEntryFlag unmarshal requires at least 1 byte, got %d", len(marshalledData))
+	}
 	aceflag.RawValue = uint8(marshalledData[0])
 	aceflag.Values = []uint8{}
 	aceflag.Flags = []string{}

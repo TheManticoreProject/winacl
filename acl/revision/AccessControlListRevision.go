@@ -1,5 +1,7 @@
 package revision
 
+import "fmt"
+
 const (
 	ACL_REVISION    = 0x02
 	ACL_REVISION_DS = 0x04
@@ -15,6 +17,9 @@ type AccessControlListRevision struct {
 // Parameters:
 //   - rawBytes ([]byte): The byte slice to parse.
 func (aclrev *AccessControlListRevision) Unmarshal(marshalledData []byte) (int, error) {
+	if len(marshalledData) < 1 {
+		return 0, fmt.Errorf("AccessControlListRevision unmarshal requires at least 1 byte, got %d", len(marshalledData))
+	}
 	aclrev.Value = uint8(marshalledData[0])
 
 	return 1, nil

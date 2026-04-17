@@ -25,6 +25,10 @@ type AccessControlMask struct {
 // Unmarshal populates the AccessControlMask from raw byte data.
 // It extracts the RawValue and determines the corresponding flags and their names.
 func (acm *AccessControlMask) Unmarshal(marshalledData []byte) (int, error) {
+	if len(marshalledData) < 4 {
+		return 0, fmt.Errorf("AccessControlMask unmarshal requires at least 4 bytes, got %d", len(marshalledData))
+	}
+
 	// Store the raw bytes and set the size
 	acm.RawBytes = marshalledData
 	acm.RawBytesSize = 4

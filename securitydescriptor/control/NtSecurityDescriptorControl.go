@@ -2,6 +2,7 @@ package control
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 // NtSecurityDescriptorControl represents the control flags for a NT Security Descriptor.
@@ -79,6 +80,9 @@ var NtSecurityDescriptorControlValueToShortName = map[uint16]string{
 // Parameters:
 //   - rawValue (uint16): The raw value to be parsed, representing the control flags as a bitmask.
 func (nsdc *NtSecurityDescriptorControl) Unmarshal(rawValue []byte) (int, error) {
+	if len(rawValue) < 2 {
+		return 0, fmt.Errorf("NtSecurityDescriptorControl unmarshal requires at least 2 bytes, got %d", len(rawValue))
+	}
 	nsdc.RawValue = binary.LittleEndian.Uint16(rawValue)
 	nsdc.Values = []uint16{}
 	nsdc.Flags = []string{}
