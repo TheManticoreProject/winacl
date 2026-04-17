@@ -326,6 +326,27 @@ func TestFromSDDLString_OddLengthFlagsError(t *testing.T) {
 	}
 }
 
+func TestFromSDDLString_UnbalancedParenthesesError(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{name: "unclosed DACL paren", input: "O:BAG:SYD:(A;;GA;;;WD"},
+		{name: "unclosed SACL paren", input: "S:(AU;SAFA;GA;;;WD"},
+		{name: "stray closing paren", input: "D:(A;;GA;;;WD))"},
+		{name: "unclosed after ACEs", input: "D:(A;;GA;;;WD)(A;;GA;;;SY"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ntsd := NtSecurityDescriptor{}
+			_, err := ntsd.FromSDDLString(tc.input)
+			if err == nil {
+				t.Fatalf("expected error for malformed SDDL %q, got nil", tc.input)
+			}
+		})
+	}
+}
+
 func TestFromSDDLString_OddLengthRightsError(t *testing.T) {
 	ntsd := NtSecurityDescriptor{}
 	_, err := ntsd.FromSDDLString("D:(A;;GAR;;;WD)")
