@@ -398,10 +398,17 @@ func (sid *SID) FromString(sidString string) error {
 	}
 	sid.RevisionLevel = uint8(revision)
 
-	// Parse the identifier authority (S-<Revision>-<IdentifierAuthority>)
+	// Parse the identifier authority (S-<Revision>-<IdentifierAuthority>).
+	// The binary SID format stores this in 6 bytes (see MS-DTYP 2.4.2.1
+	// SID_IDENTIFIER_AUTHORITY), so reject values that cannot be represented
+	// rather than silently truncating them at marshal time.
 	identifierAuthority, err := strconv.ParseUint(parts[2], 10, 64)
 	if err != nil {
 		return fmt.Errorf("invalid identifier authority in SID: %v", err)
+	}
+	const maxIdentifierAuthority = uint64(1)<<48 - 1
+	if identifierAuthority > maxIdentifierAuthority {
+		return fmt.Errorf("identifier authority %d exceeds the 48-bit SID field (max %d)", identifierAuthority, maxIdentifierAuthority)
 	}
 	sid.IdentifierAuthority.Value = identifierAuthority
 

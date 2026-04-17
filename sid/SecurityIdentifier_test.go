@@ -331,6 +331,32 @@ func Test_SID_FromStringMarshalToString(t *testing.T) {
 	}
 }
 
+// Test_SID_FromString_IdentifierAuthorityRange verifies that FromString rejects
+// identifier-authority values that cannot fit in the 6-byte binary field, and
+// accepts values exactly at the 48-bit boundary.
+func Test_SID_FromString_IdentifierAuthorityRange(t *testing.T) {
+	cases := []struct {
+		sidString string
+		wantErr   bool
+	}{
+		{"S-1-281474976710655-0", false}, // 2^48 - 1, maximum legal value
+		{"S-1-281474976710656-0", true},  // 2^48, one beyond the 6-byte field
+		{"S-1-999999999999999-0", true},  // clearly out of range
+	}
+	for _, tc := range cases {
+		t.Run(tc.sidString, func(t *testing.T) {
+			s := &sid.SID{}
+			err := s.FromString(tc.sidString)
+			if tc.wantErr && err == nil {
+				t.Fatalf("FromString(%q) expected an error, got nil", tc.sidString)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("FromString(%q) unexpected error: %v", tc.sidString, err)
+			}
+		})
+	}
+}
+
 func Test_SID_ToString(t *testing.T) {
 	sid := &sid.SID{
 		RevisionLevel: 1,
