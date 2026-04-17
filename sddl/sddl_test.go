@@ -101,6 +101,58 @@ func TestSddlCut(t *testing.T) {
 	}
 }
 
+// TestSddlCut_LowercaseMarkers verifies that CutSDDL normalises lowercase
+// component markers (o:, g:, d:, s:) the same way as their uppercase
+// counterparts, matching SDDL's case-insensitive grammar.
+func TestSddlCut_LowercaseMarkers(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		wantOwner    string
+		wantGroup    string
+		wantDaclAces []string
+		wantSaclAces []string
+	}{
+		{
+			name:         "all lowercase markers",
+			input:        "o:BAg:SYd:(A;;GA;;;WD)",
+			wantOwner:    "BA",
+			wantGroup:    "SY",
+			wantDaclAces: []string{"A;;GA;;;WD"},
+		},
+		{
+			name:      "mixed case markers",
+			input:     "O:BAg:SY",
+			wantOwner: "BA",
+			wantGroup: "SY",
+		},
+		{
+			name:         "lowercase s: SACL only",
+			input:        "s:(AU;SA;FA;;;WD)",
+			wantSaclAces: []string{"AU;SA;FA;;;WD"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOwner, gotGroup, gotDaclAces, gotSaclAces := sddl.CutSDDL(tt.input)
+
+			if gotOwner != tt.wantOwner {
+				t.Errorf("CutSDDL() owner = %q, want %q", gotOwner, tt.wantOwner)
+			}
+			if gotGroup != tt.wantGroup {
+				t.Errorf("CutSDDL() group = %q, want %q", gotGroup, tt.wantGroup)
+			}
+			if !slices.Equal(gotDaclAces, tt.wantDaclAces) {
+				t.Errorf("CutSDDL() daclAces = %v, want %v", gotDaclAces, tt.wantDaclAces)
+			}
+			if !slices.Equal(gotSaclAces, tt.wantSaclAces) {
+				t.Errorf("CutSDDL() saclAces = %v, want %v", gotSaclAces, tt.wantSaclAces)
+			}
+		})
+	}
+}
+
 // func TestSDDLToBinary(t *testing.T) {
 // 	tests := []struct {
 // 		name    string

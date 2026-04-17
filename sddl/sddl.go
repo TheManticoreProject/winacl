@@ -31,7 +31,10 @@ func CutSDDL(sddlString string) (string, string, []string, []string) {
 	for k < len(sddlString) {
 		upperChar := strings.ToUpper(string(sddlString[k]))
 		if k+1 < len(sddlString) && (upperChar == "O" || upperChar == "G" || upperChar == "D" || upperChar == "S") && sddlString[k+1] == ':' {
-			currentComponent = sddlString[k : k+2]
+			// Normalise the key to uppercase so lowercase markers (o:, g:, d:, s:)
+			// land in the same bucket as their uppercase counterparts; SDDL is
+			// case-insensitive at the component-marker level.
+			currentComponent = upperChar + ":"
 			k += 2
 			continue
 		}
