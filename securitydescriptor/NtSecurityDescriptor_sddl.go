@@ -31,7 +31,10 @@ import (
 // Returns:
 //   - (int, error): Always returns 0 for the int value, and an error if parsing fails.
 func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error) {
-	ownerStr, groupStr, daclFlags, daclAces, saclFlags, saclAces := cutSDDL(sddlString)
+	ownerStr, groupStr, daclFlags, daclAces, saclFlags, saclAces, err := cutSDDL(sddlString)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse SDDL: %w", err)
+	}
 
 	ntsd.Header.Revision = 1
 
@@ -171,11 +174,11 @@ func (ntsd *NtSecurityDescriptor) ToSDDLString() (string, error) {
 
 // cutSDDL parses an SDDL string into its component parts.
 // This is a local copy to avoid circular imports with the sddl package.
-// Returns: owner, group, daclFlags, daclAces, saclFlags, saclAces
-func cutSDDL(sddlString string) (string, string, string, []string, string, []string) {
+// Returns: owner, group, daclFlags, daclAces, saclFlags, saclAces, error
+func cutSDDL(sddlString string) (string, string, string, []string, string, []string, error) {
 	sddlString = strings.TrimSpace(sddlString)
 	if len(sddlString) == 0 {
-		return "", "", "", nil, "", nil
+		return "", "", "", nil, "", nil, nil
 	}
 
 	components := map[string]string{
@@ -200,20 +203,27 @@ func cutSDDL(sddlString string) (string, string, string, []string, string, []str
 		k++
 	}
 
-	daclFlags, daclAces := cutAces(components["D:"])
-	saclFlags, saclAces := cutAces(components["S:"])
+	daclFlags, daclAces, err := cutAces(components["D:"])
+	if err != nil {
+		return "", "", "", nil, "", nil, fmt.Errorf("DACL: %w", err)
+	}
+	saclFlags, saclAces, err := cutAces(components["S:"])
+	if err != nil {
+		return "", "", "", nil, "", nil, fmt.Errorf("SACL: %w", err)
+	}
 
-	return components["O:"], components["G:"], daclFlags, daclAces, saclFlags, saclAces
+	return components["O:"], components["G:"], daclFlags, daclAces, saclFlags, saclAces, nil
 }
 
 // cutAces extracts the ACL flags prefix and individual ACE strings from a DACL/SACL component.
-func cutAces(aclStr string) (string, []string) {
+// Returns an error if parentheses are unbalanced, so malformed input cannot be silently accepted.
+func cutAces(aclStr string) (string, []string, error) {
 	var aces []string
 
 	start := strings.Index(aclStr, "(")
 	if start == -1 {
 		// No ACEs; everything is flags (or empty)
-		return strings.TrimSpace(aclStr), aces
+		return strings.TrimSpace(aclStr), aces, nil
 	}
 
 	aclFlags := strings.TrimSpace(aclStr[:start])
@@ -228,6 +238,9 @@ func cutAces(aclStr string) (string, []string) {
 			}
 			depth++
 		case ')':
+			if depth == 0 {
+				return "", nil, fmt.Errorf("unbalanced ')' at position %d", i)
+			}
 			depth--
 			if depth == 0 {
 				aces = append(aces, aclStr[aceStart:i])
@@ -235,7 +248,11 @@ func cutAces(aclStr string) (string, []string) {
 		}
 	}
 
-	return aclFlags, aces
+	if depth != 0 {
+		return "", nil, fmt.Errorf("unclosed '(' starting at position %d", aceStart-1)
+	}
+
+	return aclFlags, aces, nil
 }
 
 // sddlParseSID parses a SID from an SDDL string (abbreviation or full SID).
