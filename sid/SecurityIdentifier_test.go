@@ -405,6 +405,34 @@ func Test_SID_Marshal_ZeroRID(t *testing.T) {
 	}
 }
 
+// Test_SID_Unmarshal_TruncatedRID verifies that Unmarshal rejects input whose
+// declared SubAuthorityCount mandates a RelativeIdentifier that is missing or
+// truncated, instead of silently zero-padding it and returning success.
+func Test_SID_Unmarshal_TruncatedRID(t *testing.T) {
+	testCases := []struct {
+		name string
+		hex  string
+	}{
+		// rev=1, SAC=2, auth=5, one sub-authority (0x15=21), RID entirely absent.
+		{name: "RID missing", hex: "0102000000000005" + "15000000"},
+		// Same header, RID truncated to 2 of 4 bytes.
+		{name: "RID truncated to 2 bytes", hex: "0102000000000005" + "15000000" + "f401"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			raw, err := hex.DecodeString(tc.hex)
+			if err != nil {
+				t.Fatalf("invalid test hex: %v", err)
+			}
+			s := &sid.SID{}
+			if _, err := s.Unmarshal(raw); err == nil {
+				t.Errorf("Unmarshal(%s) = nil error, want error on truncated RID", tc.hex)
+			}
+		})
+	}
+}
+
 // Test_SID_UnmarshalMarshal_ZeroRID verifies that parsing a genuine 12-byte
 // binary for a zero-RID SID and re-marshalling preserves the exact bytes.
 func Test_SID_UnmarshalMarshal_ZeroRID(t *testing.T) {

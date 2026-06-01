@@ -308,17 +308,18 @@ func (sid *SID) Unmarshal(marshalledData []byte) (int, error) {
 		}
 	}
 
-	if int(sid.RawBytesSize) < len(marshalledData) {
-		// Here we pad the relative identifier bytes to match the expected length of 4 bytes
-		remaining := marshalledData[sid.RawBytesSize:]
-		actualLen := len(remaining)
-		if actualLen > 4 {
-			actualLen = 4
+	// Parse the RelativeIdentifier (the last sub-authority). Per MS-DTYP 2.4.2 a
+	// SID with SubAuthorityCount > 0 always carries a full 4-byte final
+	// sub-authority, so require those 4 bytes rather than silently zero-padding a
+	// truncated value, which would fabricate a valid-looking SID from malformed
+	// input and report a wrong consumed-byte count.
+	if sid.SubAuthorityCount > 0 {
+		if len(marshalledData) >= int(sid.RawBytesSize)+4 {
+			sid.RelativeIdentifier = binary.LittleEndian.Uint32(marshalledData[sid.RawBytesSize : sid.RawBytesSize+4])
+			sid.RawBytesSize += 4
+		} else {
+			return 0, fmt.Errorf("not enough data to parse RelativeIdentifier")
 		}
-		buffer := make([]byte, 4)
-		copy(buffer, remaining[:actualLen])
-		sid.RelativeIdentifier = binary.LittleEndian.Uint32(buffer)
-		sid.RawBytesSize += uint32(actualLen)
 	}
 
 	return int(sid.RawBytesSize), nil
