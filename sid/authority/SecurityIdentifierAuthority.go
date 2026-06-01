@@ -1,6 +1,9 @@
 package authority
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 // SID authority constants define the various authorities used in Security Identifiers (SIDs),
 // represented as hexadecimal values.
@@ -63,6 +66,10 @@ type SecurityIdentifierAuthority struct {
 //     If found, assigns the retrieved name to the `Name` field.
 //     If not found, assigns a default value of "?" to `Name`.
 func (sia *SecurityIdentifierAuthority) Unmarshal(marshalledData []byte) (int, error) {
+	if len(marshalledData) < 6 {
+		return 0, fmt.Errorf("SecurityIdentifierAuthority unmarshal requires at least 6 bytes, got %d", len(marshalledData))
+	}
+
 	sia.Value = 0
 	sia.Value += uint64(binary.BigEndian.Uint16(marshalledData[0:2])) << 32
 	sia.Value += uint64(binary.BigEndian.Uint16(marshalledData[2:4])) << 16

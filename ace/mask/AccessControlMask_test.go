@@ -28,3 +28,17 @@ func TestAccessControlMask_Involution(t *testing.T) {
 		t.Errorf("Involution test failed: expected 0x%08x, got 0x%08x", originalMask.RawValue, parsedMask.RawValue)
 	}
 }
+
+// TestAccessControlMask_Unmarshal_TruncatedReturnsError asserts that Unmarshal
+// returns a parse error instead of panicking when fewer than 4 bytes are given.
+// Regression test for issue #30.
+func TestAccessControlMask_Unmarshal_TruncatedReturnsError(t *testing.T) {
+	for _, n := range []int{0, 1, 2, 3} {
+		buf := make([]byte, n)
+		var m AccessControlMask
+		_, err := m.Unmarshal(buf)
+		if err == nil {
+			t.Errorf("Unmarshal(%d bytes) expected error, got nil", n)
+		}
+	}
+}

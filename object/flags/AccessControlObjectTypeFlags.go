@@ -1,6 +1,9 @@
 package flags
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 // A set of bit flags that indicate whether the ObjectType and InheritedObjectType members are present. This parameter can be one or more of the following values.
 //
@@ -24,6 +27,9 @@ type AccessControlObjectTypeFlags struct {
 // Attributes:
 //   - RawBytes ([]byte): The byte slice representing the AccessControlObjectTypeFlags.
 func (acotype *AccessControlObjectTypeFlags) Unmarshal(rawBytes []byte) (int, error) {
+	if len(rawBytes) < 4 {
+		return 0, fmt.Errorf("AccessControlObjectTypeFlags unmarshal requires at least 4 bytes, got %d", len(rawBytes))
+	}
 	acotype.Value = binary.LittleEndian.Uint32(rawBytes[0:4])
 	return 4, nil
 }
