@@ -157,26 +157,33 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 		ntsd.Header.OffsetDacl = 0
 	}
 
-	// Marshal Owner
+	// Marshal Owner. A zero-value Identity (as produced by NewSecurityDescriptor)
+	// has an unset SID whose RevisionLevel is 0, which is not a valid SID. Treat
+	// it as "no owner" and write OffsetOwner = 0, mirroring the presence checks
+	// used for the SACL and DACL, instead of emitting an invalid S-0-0-0 SID.
 	dataOwner := []byte{}
-	if ntsd.Owner != nil {
+	if ntsd.Owner != nil && ntsd.Owner.SID.RevisionLevel != 0 {
 		dataOwner, err = ntsd.Owner.SID.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Owner: %w", err)
 		}
 		ntsd.Header.OffsetOwner = uint32(offset)
 		offset += len(dataOwner)
+	} else {
+		ntsd.Header.OffsetOwner = 0
 	}
 
-	// Marshal Group
+	// Marshal Group (see the Owner note above).
 	dataGroup := []byte{}
-	if ntsd.Group != nil {
+	if ntsd.Group != nil && ntsd.Group.SID.RevisionLevel != 0 {
 		dataGroup, err = ntsd.Group.SID.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Group: %w", err)
 		}
 		ntsd.Header.OffsetGroup = uint32(offset)
 		offset += len(dataGroup)
+	} else {
+		ntsd.Header.OffsetGroup = 0
 	}
 
 	// Update the header and append the header bytes
