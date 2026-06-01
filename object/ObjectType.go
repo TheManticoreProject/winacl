@@ -48,7 +48,7 @@ func (objType *ObjectType) Marshal() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	objType.RawBytesSize += uint32(len(bytesStream))
+	objType.RawBytesSize = uint32(len(bytesStream))
 	return bytesStream, nil
 }
 
