@@ -1,6 +1,8 @@
 package rights
 
 import (
+	"sort"
+
 	ntsd_rights "github.com/TheManticoreProject/winacl/rights"
 )
 
@@ -53,7 +55,23 @@ var RightToSDDL map[uint32]string
 
 func init() {
 	RightToSDDL = make(map[uint32]string, len(SDDLToRight))
-	for sddl, right := range SDDLToRight {
-		RightToSDDL[right] = sddl
+
+	// Several SDDL tokens can share the same access-mask value (e.g. "KR"
+	// KEY_READ and "KX" KEY_EXECUTE are both 0x00020019). Inverting the map by
+	// ranging over it directly would pick a winner at random per run, because Go
+	// randomises map iteration order. Iterate the tokens in sorted order and keep
+	// the first (lexicographically smallest) token for each mask, so the reverse
+	// lookup is deterministic and the canonical token is stable across runs.
+	tokens := make([]string, 0, len(SDDLToRight))
+	for sddl := range SDDLToRight {
+		tokens = append(tokens, sddl)
+	}
+	sort.Strings(tokens)
+
+	for _, sddl := range tokens {
+		right := SDDLToRight[sddl]
+		if _, exists := RightToSDDL[right]; !exists {
+			RightToSDDL[right] = sddl
+		}
 	}
 }
