@@ -1,6 +1,7 @@
 package ace
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -18,6 +19,15 @@ type AccessControlEntry struct {
 	Mask                    mask.AccessControlMask
 	Identity                identity.Identity
 	AccessControlObjectType object.AccessControlObjectType
+
+	// ApplicationData holds the optional, variable-length trailing bytes of an
+	// ACE that follow the fixed fields. For callback ACE types
+	// (ACCESS_ALLOWED_CALLBACK, ACCESS_DENIED_CALLBACK and their object/audit
+	// variants) this is the conditional expression; for
+	// SYSTEM_RESOURCE_ATTRIBUTE and SYSTEM_SCOPED_POLICY_ID ACEs it is the
+	// attribute or policy data. The length is derived from the ACE Header.Size.
+	// These bytes are preserved verbatim so that Marshal(Unmarshal(x)) == x.
+	ApplicationData []byte
 
 	// Internal
 	RawBytes     []byte
@@ -546,6 +556,18 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		return 0, fmt.Errorf("unknown ACE type: %d", ace.Header.Type.Value)
 	}
 
+	// Capture any trailing bytes that follow the fixed ACE fields as
+	// ApplicationData. Callback, resource-attribute and scoped-policy ACE types
+	// carry a conditional expression or attribute/policy blob here whose size is
+	// implied by Header.Size. Preserving these bytes is required for a lossless
+	// Marshal/Unmarshal round-trip; previously they were dropped and replaced
+	// with zero padding on Marshal.
+	if ace.RawBytesSize < uint32(ace.Header.Size) {
+		ace.ApplicationData = ace.RawBytes[ace.RawBytesSize:ace.Header.Size]
+	} else {
+		ace.ApplicationData = nil
+	}
+
 	// Return the full ACE size from the header, not just the bytes we parsed.
 	// ACE types with ApplicationData (callback, resource attribute, scoped policy)
 	// have trailing data beyond what we explicitly parse, and the caller needs
@@ -770,6 +792,12 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		marshalledData = append(marshalledData, bytesStream...)
 	}
 
+	// Append any preserved ApplicationData (conditional expression for callback
+	// ACEs, attribute data for resource-attribute ACEs, policy id for
+	// scoped-policy ACEs) so it survives the round-trip instead of being lost to
+	// zero padding below.
+	marshalledData = append(marshalledData, ace.ApplicationData...)
+
 	// Pad the marshalled data to the size specified in the ACE header
 	headerSize := 4
 	if ace.Header.Size > uint16(len(marshalledData)+headerSize) {
@@ -875,6 +903,10 @@ func (ace *AccessControlEntry) Describe(indent int) {
 	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
 		ace.Mask.Describe(indent + 1)
 		ace.Identity.Describe(indent + 1)
+	}
+
+	if len(ace.ApplicationData) > 0 {
+		fmt.Printf("%s │ \x1b[93mApplicationData\x1b[0m : \x1b[96m%s\x1b[0m\n", indentPrompt, hex.EncodeToString(ace.ApplicationData))
 	}
 
 	fmt.Printf("%s └─\n", indentPrompt)

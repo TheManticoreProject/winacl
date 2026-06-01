@@ -116,3 +116,65 @@ func TestAccessControlEntry_Unmarshal_MalformedNoPanic(t *testing.T) {
 		})
 	}
 }
+
+// TestAccessControlEntry_Involution_ApplicationData verifies that ACE types
+// carrying variable-length trailing ApplicationData (callback ACEs and their
+// object variants, resource-attribute and scoped-policy ACEs) survive a
+// Marshal(Unmarshal(x)) round-trip without losing the trailing bytes. Before
+// ApplicationData was captured, Marshal replaced these bytes with zero padding,
+// silently corrupting the conditional expression / attribute data.
+func TestAccessControlEntry_Involution_ApplicationData(t *testing.T) {
+	const (
+		// Mask + 28-byte SID (S-1-5-21-...) reused from the other involution test.
+		body = "ff010f0001050000000000051500000028bb82279261b9fe2474aa5d00020000"
+		// A "artx" conditional-expression marker followed by some payload bytes.
+		appData = "61727478deadbeefcafe0000"
+	)
+
+	cases := []struct {
+		name string
+		hex  string
+	}{
+		// ACCESS_ALLOWED_CALLBACK (0x09): header + mask + sid + ApplicationData.
+		// Size = 4 + 4 + 28 + 12 = 48 = 0x30.
+		{"access_allowed_callback", "09003000" + body + appData},
+		// ACCESS_DENIED_CALLBACK (0x0a).
+		{"access_denied_callback", "0a003000" + body + appData},
+		// ACCESS_ALLOWED_CALLBACK_OBJECT (0x0b) with an object-type Flags field of
+		// 0 (no GUIDs present): header + mask + flags(4) + sid + ApplicationData.
+		// Size = 4 + 4 + 4 + 28 + 12 = 52 = 0x34.
+		{"access_allowed_callback_object", "0b003400ff010f0000000000" +
+			"01050000000000051500000028bb82279261b9fe2474aa5d00020000" + appData},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rawBytes, err := hex.DecodeString(tc.hex)
+			if err != nil {
+				t.Fatalf("Failed to decode hex string: %v", err)
+			}
+
+			var ace AccessControlEntry
+			_, err = ace.Unmarshal(rawBytes)
+			if err != nil {
+				t.Fatalf("Failed to unmarshal AccessControlEntry: %v", err)
+			}
+
+			expectedAppData, _ := hex.DecodeString(appData)
+			if !bytes.Equal(ace.ApplicationData, expectedAppData) {
+				t.Fatalf("ApplicationData mismatch: expected %s, got %s",
+					appData, hex.EncodeToString(ace.ApplicationData))
+			}
+
+			serializedBytes, err := ace.Marshal()
+			if err != nil {
+				t.Fatalf("Failed to marshal AccessControlEntry: %v", err)
+			}
+
+			if !bytes.Equal(rawBytes, serializedBytes) {
+				t.Errorf("Involution test failed: expected %s, got %s",
+					hex.EncodeToString(rawBytes), hex.EncodeToString(serializedBytes))
+			}
+		})
+	}
+}
