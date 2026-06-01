@@ -83,7 +83,11 @@ func (sacl *SystemAccessControlList) Marshal() ([]byte, error) {
 
 	// Marshal the header at the beginning of the serialized data
 	// We need to include the header in the size calculation, it is 8 bytes long
-	sacl.Header.AclSize = uint16(8 + len(marshalledData))
+	totalSize := 8 + len(marshalledData)
+	if totalSize > 0xFFFF {
+		return nil, fmt.Errorf("SACL too large to marshal: size %d exceeds the uint16 AclSize maximum (65535)", totalSize)
+	}
+	sacl.Header.AclSize = uint16(totalSize)
 	bytesStream, err := sacl.Header.Marshal()
 	if err != nil {
 		return nil, err

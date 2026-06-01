@@ -832,13 +832,21 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 
 	// Pad the marshalled data to the size specified in the ACE header
 	headerSize := 4
-	if ace.Header.Size > uint16(len(marshalledData)+headerSize) {
+	// The ACE Header.Size field is a uint16, so the body plus the 4-byte header
+	// cannot exceed 65535 bytes. Guard the conversion below so an oversized
+	// ApplicationData payload errors instead of silently wrapping into a tiny,
+	// corrupt Header.Size.
+	totalSize := len(marshalledData) + headerSize
+	if totalSize > 0xFFFF {
+		return nil, fmt.Errorf("ACE too large to marshal: size %d exceeds the uint16 Header.Size maximum (65535)", totalSize)
+	}
+	if ace.Header.Size > uint16(totalSize) {
 		// Pad the marshalled data to the size specified in the ACE header
 		for uint32(len(marshalledData)+headerSize) < uint32(ace.Header.Size) {
 			marshalledData = append(marshalledData, 0)
 		}
 	} else {
-		ace.Header.Size = uint16(len(marshalledData) + headerSize)
+		ace.Header.Size = uint16(totalSize)
 	}
 
 	// Marshal Header and append at start of marshalled data
