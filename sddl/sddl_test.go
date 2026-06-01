@@ -62,7 +62,10 @@ func TestSddlCut(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOwner, gotGroup, gotDaclAces, gotSaclAces := sddl.CutSDDL(tt.input)
+			gotOwner, gotGroup, gotDaclAces, gotSaclAces, err := sddl.CutSDDL(tt.input)
+			if err != nil {
+				t.Fatalf("CutSDDL() unexpected error = %v", err)
+			}
 
 			if gotOwner != tt.wantOwner {
 				t.Errorf("CutSDDL() owner = %v, want %v", gotOwner, tt.wantOwner)
@@ -135,7 +138,10 @@ func TestSddlCut_LowercaseMarkers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOwner, gotGroup, gotDaclAces, gotSaclAces := sddl.CutSDDL(tt.input)
+			gotOwner, gotGroup, gotDaclAces, gotSaclAces, err := sddl.CutSDDL(tt.input)
+			if err != nil {
+				t.Fatalf("CutSDDL() unexpected error = %v", err)
+			}
 
 			if gotOwner != tt.wantOwner {
 				t.Errorf("CutSDDL() owner = %q, want %q", gotOwner, tt.wantOwner)
@@ -148,6 +154,52 @@ func TestSddlCut_LowercaseMarkers(t *testing.T) {
 			}
 			if !slices.Equal(gotSaclAces, tt.wantSaclAces) {
 				t.Errorf("CutSDDL() saclAces = %v, want %v", gotSaclAces, tt.wantSaclAces)
+			}
+		})
+	}
+}
+
+// TestSddlCut_ConditionalAceSingleToken verifies that an ACE containing nested
+// parentheses and a ':' (as in a conditional expression) is tokenized as a
+// single ACE, and that a marker-like substring inside the ACE body does not
+// start a new component.
+func TestSddlCut_ConditionalAceSingleToken(t *testing.T) {
+	// The inner "(@xD:1)" carries both nested parens and a "D:" substring.
+	input := "D:(XA;;FA;;;WD;(@xD:1))"
+
+	gotOwner, gotGroup, gotDaclAces, gotSaclAces, err := sddl.CutSDDL(input)
+	if err != nil {
+		t.Fatalf("CutSDDL() unexpected error = %v", err)
+	}
+	if gotOwner != "" || gotGroup != "" {
+		t.Errorf("CutSDDL() owner/group = %q/%q, want empty", gotOwner, gotGroup)
+	}
+	if len(gotSaclAces) != 0 {
+		t.Errorf("CutSDDL() saclAces = %v, want none (inner \"D:\" must not start a component)", gotSaclAces)
+	}
+	want := []string{"XA;;FA;;;WD;(@xD:1)"}
+	if !slices.Equal(gotDaclAces, want) {
+		t.Errorf("CutSDDL() daclAces = %v, want %v", gotDaclAces, want)
+	}
+}
+
+// TestSddlCut_MalformedReturnsError verifies that malformed SDDL is rejected
+// with an error instead of being silently truncated.
+func TestSddlCut_MalformedReturnsError(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "unbalanced open paren in DACL", input: "D:(A;;GA;;;WD"},
+		{name: "extra close paren", input: "D:(A;;GA;;;WD))"},
+		{name: "leading garbage before marker", input: "garbageO:BA"},
+		{name: "trailing garbage after last ACE", input: "D:(A;;GA;;;WD)junk"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, _, _, _, err := sddl.CutSDDL(tt.input); err == nil {
+				t.Errorf("CutSDDL(%q) = nil error, want error", tt.input)
 			}
 		})
 	}
