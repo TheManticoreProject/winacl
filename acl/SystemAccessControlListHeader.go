@@ -65,6 +65,8 @@ func (saclheader *SystemAccessControlListHeader) Unmarshal(marshalledData []byte
 func (saclheader *SystemAccessControlListHeader) Marshal() ([]byte, error) {
 	var marshalledData []byte
 
+	saclheader.RawBytesSize = 0
+
 	bytesStream, err := saclheader.Revision.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Revision: %w", err)

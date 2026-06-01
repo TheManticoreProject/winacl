@@ -63,6 +63,28 @@ func TestSystemAccessControlListHeader_MarshalUnmarshal(t *testing.T) {
 	}
 }
 
+// TestSystemAccessControlListHeader_Marshal_RawBytesSize_Idempotent verifies
+// that repeated Marshal calls report the fixed 8-byte header size rather than
+// accumulating it.
+func TestSystemAccessControlListHeader_Marshal_RawBytesSize_Idempotent(t *testing.T) {
+	header := SystemAccessControlListHeader{
+		Revision: revision.AccessControlListRevision{Value: 0x02},
+		Sbz1:     0x00,
+		AclSize:  0x30,
+		AceCount: 0x05,
+		Sbz2:     0x00,
+	}
+
+	for i := 0; i < 3; i++ {
+		if _, err := header.Marshal(); err != nil {
+			t.Fatalf("Marshal() call %d error = %v", i, err)
+		}
+		if header.RawBytesSize != 8 {
+			t.Errorf("after Marshal() call %d: RawBytesSize = %d, want 8", i, header.RawBytesSize)
+		}
+	}
+}
+
 func TestSystemAccessControlListHeader_MarshalUnmarshalWithEdgeCases(t *testing.T) {
 	testCases := []struct {
 		name     string

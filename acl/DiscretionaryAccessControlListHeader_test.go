@@ -75,3 +75,27 @@ func TestDiscretionaryAccessControlListHeader_Involution(t *testing.T) {
 		t.Errorf("Sbz2 value not preserved: expected %d, got %d", daclHeader.Sbz2, daclHeader2.Sbz2)
 	}
 }
+
+// TestDiscretionaryAccessControlListHeader_Marshal_RawBytesSize_Idempotent
+// verifies that repeated Marshal calls report the fixed 8-byte header size
+// rather than accumulating it.
+func TestDiscretionaryAccessControlListHeader_Marshal_RawBytesSize_Idempotent(t *testing.T) {
+	daclHeaderBytes, err := hex.DecodeString("0100140002000000")
+	if err != nil {
+		t.Fatalf("Failed to decode header hex: %v", err)
+	}
+
+	daclHeader := &DiscretionaryAccessControlListHeader{}
+	if _, err := daclHeader.Unmarshal(daclHeaderBytes); err != nil {
+		t.Fatalf("Failed to unmarshal DACL header: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		if _, err := daclHeader.Marshal(); err != nil {
+			t.Fatalf("Marshal() call %d error = %v", i, err)
+		}
+		if daclHeader.RawBytesSize != 8 {
+			t.Errorf("after Marshal() call %d: RawBytesSize = %d, want 8", i, daclHeader.RawBytesSize)
+		}
+	}
+}
