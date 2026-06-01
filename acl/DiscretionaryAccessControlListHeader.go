@@ -66,6 +66,8 @@ func (daclheader *DiscretionaryAccessControlListHeader) Unmarshal(marshalledData
 func (daclheader *DiscretionaryAccessControlListHeader) Marshal() ([]byte, error) {
 	var marshalledData []byte
 
+	daclheader.RawBytesSize = 0
+
 	bytesStream, err := daclheader.Revision.Marshal()
 	if err != nil {
 		return nil, err
