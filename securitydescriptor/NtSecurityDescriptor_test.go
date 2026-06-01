@@ -147,6 +147,42 @@ func TestNtSecurityDescriptor_Involution(t *testing.T) {
 	}
 }
 
+// TestNtSecurityDescriptor_Marshal_UnsetOwnerGroup verifies that marshalling a
+// descriptor whose Owner/Group were never populated (as produced by
+// NewSecurityDescriptor) writes OffsetOwner/OffsetGroup = 0 and emits no SID
+// bytes, rather than an invalid S-0-0-0 SID.
+func TestNtSecurityDescriptor_Marshal_UnsetOwnerGroup(t *testing.T) {
+	ntsd := securitydescriptor.NewSecurityDescriptor()
+
+	data, err := ntsd.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	if ntsd.Header.OffsetOwner != 0 {
+		t.Errorf("OffsetOwner = %d, want 0 for an unset owner", ntsd.Header.OffsetOwner)
+	}
+	if ntsd.Header.OffsetGroup != 0 {
+		t.Errorf("OffsetGroup = %d, want 0 for an unset group", ntsd.Header.OffsetGroup)
+	}
+	// With no owner, group, DACL, or SACL set, only the 20-byte header is emitted.
+	if len(data) != 20 {
+		t.Errorf("Marshal() length = %d, want 20 (header only)", len(data))
+	}
+
+	// The descriptor must round-trip with no fabricated owner/group.
+	parsed := &securitydescriptor.NtSecurityDescriptor{}
+	if _, err := parsed.Unmarshal(data); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	if parsed.Owner != nil {
+		t.Errorf("parsed Owner = %q, want nil", parsed.Owner.SID.ToString())
+	}
+	if parsed.Group != nil {
+		t.Errorf("parsed Group = %q, want nil", parsed.Group.SID.ToString())
+	}
+}
+
 func TestNtSecurityDescriptor_Unmarshal(t *testing.T) {
 	ntsd := securitydescriptor.NewSecurityDescriptor()
 
