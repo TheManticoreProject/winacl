@@ -9,6 +9,11 @@ import (
 	"github.com/TheManticoreProject/winacl/securitydescriptor/header"
 )
 
+// ntSecurityDescriptorHeaderSize is the fixed size, in bytes, of the security
+// descriptor header. A non-zero component offset must point at or past this
+// region; an offset inside the header overlaps it and is structurally invalid.
+const ntSecurityDescriptorHeaderSize uint32 = 20
+
 // NtSecurityDescriptor represents a Windows security descriptor.
 type NtSecurityDescriptor struct {
 	Header header.NtSecurityDescriptorHeader
@@ -43,11 +48,11 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 	// Track the maximum extent (offset + component size) across all components,
 	// since components are placed at specific offsets within the buffer rather
 	// than sequentially.
-	ntsd.RawBytesSize = 20 // header size
+	ntsd.RawBytesSize = ntSecurityDescriptorHeaderSize // header size
 
 	// Unmarshal Owner if present
 	if ntsd.Header.OffsetOwner != 0 {
-		if ntsd.Header.OffsetOwner < uint32(len(ntsd.RawBytes)) {
+		if ntsd.Header.OffsetOwner >= ntSecurityDescriptorHeaderSize && ntsd.Header.OffsetOwner < uint32(len(ntsd.RawBytes)) {
 			if ntsd.Owner == nil {
 				ntsd.Owner = &identity.Identity{}
 			}
@@ -59,13 +64,13 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 				ntsd.RawBytesSize = end
 			}
 		} else {
-			return 0, fmt.Errorf("failed to unmarshal Owner: offset is out of bounds OffsetOwner=%d, RawBytesSize=%d", ntsd.Header.OffsetOwner, ntsd.RawBytesSize)
+			return 0, fmt.Errorf("failed to unmarshal Owner: offset is invalid OffsetOwner=%d (must be >= %d and < %d)", ntsd.Header.OffsetOwner, ntSecurityDescriptorHeaderSize, len(ntsd.RawBytes))
 		}
 	}
 
 	// Unmarshal Group if present
 	if ntsd.Header.OffsetGroup != 0 {
-		if ntsd.Header.OffsetGroup < uint32(len(ntsd.RawBytes)) {
+		if ntsd.Header.OffsetGroup >= ntSecurityDescriptorHeaderSize && ntsd.Header.OffsetGroup < uint32(len(ntsd.RawBytes)) {
 			if ntsd.Group == nil {
 				ntsd.Group = &identity.Identity{}
 			}
@@ -77,13 +82,13 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 				ntsd.RawBytesSize = end
 			}
 		} else {
-			return 0, fmt.Errorf("failed to unmarshal Group: offset is out of bounds OffsetGroup=%d, RawBytesSize=%d", ntsd.Header.OffsetGroup, ntsd.RawBytesSize)
+			return 0, fmt.Errorf("failed to unmarshal Group: offset is invalid OffsetGroup=%d (must be >= %d and < %d)", ntsd.Header.OffsetGroup, ntSecurityDescriptorHeaderSize, len(ntsd.RawBytes))
 		}
 	}
 
 	// Unmarshal DACL if present
 	if ntsd.Header.OffsetDacl != 0 {
-		if ntsd.Header.OffsetDacl < uint32(len(ntsd.RawBytes)) {
+		if ntsd.Header.OffsetDacl >= ntSecurityDescriptorHeaderSize && ntsd.Header.OffsetDacl < uint32(len(ntsd.RawBytes)) {
 			if ntsd.DACL == nil {
 				ntsd.DACL = &acl.DiscretionaryAccessControlList{}
 			}
@@ -95,13 +100,13 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 				ntsd.RawBytesSize = end
 			}
 		} else {
-			return 0, fmt.Errorf("failed to unmarshal DACL: offset is out of bounds OffsetDacl=%d, RawBytesSize=%d", ntsd.Header.OffsetDacl, ntsd.RawBytesSize)
+			return 0, fmt.Errorf("failed to unmarshal DACL: offset is invalid OffsetDacl=%d (must be >= %d and < %d)", ntsd.Header.OffsetDacl, ntSecurityDescriptorHeaderSize, len(ntsd.RawBytes))
 		}
 	}
 
 	// Unmarshal SACL if present
 	if ntsd.Header.OffsetSacl != 0 {
-		if ntsd.Header.OffsetSacl < uint32(len(ntsd.RawBytes)) {
+		if ntsd.Header.OffsetSacl >= ntSecurityDescriptorHeaderSize && ntsd.Header.OffsetSacl < uint32(len(ntsd.RawBytes)) {
 			if ntsd.SACL == nil {
 				ntsd.SACL = &acl.SystemAccessControlList{}
 			}
@@ -113,7 +118,7 @@ func (ntsd *NtSecurityDescriptor) Unmarshal(marshalledData []byte) (int, error) 
 				ntsd.RawBytesSize = end
 			}
 		} else {
-			return 0, fmt.Errorf("failed to unmarshal SACL: offset is out of bounds OffsetSacl=%d, RawBytesSize=%d", ntsd.Header.OffsetSacl, ntsd.RawBytesSize)
+			return 0, fmt.Errorf("failed to unmarshal SACL: offset is invalid OffsetSacl=%d (must be >= %d and < %d)", ntsd.Header.OffsetSacl, ntSecurityDescriptorHeaderSize, len(ntsd.RawBytes))
 		}
 	}
 
