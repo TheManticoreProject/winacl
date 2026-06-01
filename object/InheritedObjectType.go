@@ -53,7 +53,7 @@ func (inheritedObjType *InheritedObjectType) Marshal() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	inheritedObjType.RawBytesSize += uint32(len(bytesStream))
+	inheritedObjType.RawBytesSize = uint32(len(bytesStream))
 	return bytesStream, nil
 }
 
