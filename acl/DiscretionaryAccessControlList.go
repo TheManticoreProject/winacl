@@ -33,17 +33,30 @@ func (dacl *DiscretionaryAccessControlList) Unmarshal(marshalledData []byte) (in
 	dacl.RawBytesSize += uint32(rawBytesSize)
 	marshalledData = marshalledData[rawBytesSize:]
 
+	// Bound ACE parsing to the region declared by AclSize. The caller hands in
+	// the entire remaining buffer (in a security descriptor the ACL is followed
+	// by the Owner/Group SIDs), so without this bound a corrupt or oversized
+	// AceCount would walk past the ACL and mis-parse adjacent components as ACEs.
+	if int(dacl.Header.AclSize) < rawBytesSize {
+		return 0, fmt.Errorf("invalid DACL: AclSize (%d) is smaller than the header size (%d)", dacl.Header.AclSize, rawBytesSize)
+	}
+	aceRegionLen := int(dacl.Header.AclSize) - rawBytesSize
+	if aceRegionLen > len(marshalledData) {
+		return 0, fmt.Errorf("invalid DACL: AclSize (%d) exceeds available data (%d)", dacl.Header.AclSize, rawBytesSize+len(marshalledData))
+	}
+	aceData := marshalledData[:aceRegionLen]
+
 	// Parse all ACEs
 	for index := 0; index < int(dacl.Header.AceCount); index++ {
 		entry := ace.AccessControlEntry{}
-		rawBytesSize, err := entry.Unmarshal(marshalledData)
+		rawBytesSize, err := entry.Unmarshal(aceData)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("failed to unmarshal ACE %d/%d within AclSize: %w", index+1, dacl.Header.AceCount, err)
 		}
 		entry.Index = uint16(index + 1)
 		dacl.Entries = append(dacl.Entries, entry)
 		dacl.RawBytesSize += uint32(rawBytesSize)
-		marshalledData = marshalledData[rawBytesSize:]
+		aceData = aceData[rawBytesSize:]
 	}
 
 	dacl.RawBytes = dacl.RawBytes[:dacl.RawBytesSize]
