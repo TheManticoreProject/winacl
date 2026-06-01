@@ -178,3 +178,48 @@ func TestAccessControlEntry_Involution_ApplicationData(t *testing.T) {
 		})
 	}
 }
+
+// TestAccessControlEntry_Involution_CallbackObjectAndAuditCallback is a
+// regression test for the Marshal switch omitting the
+// ACCESS_DENIED_CALLBACK_OBJECT (0x0c) and SYSTEM_AUDIT_CALLBACK (0x0d) ACE
+// types. Before the fix, Marshal emitted only the 4-byte header (plus zero
+// padding) for these types, silently dropping the Mask, ObjectType and SID.
+func TestAccessControlEntry_Involution_CallbackObjectAndAuditCallback(t *testing.T) {
+	const sid28 = "01050000000000051500000028bb82279261b9fe2474aa5d00020000"
+
+	cases := []struct {
+		name string
+		hex  string
+	}{
+		// ACCESS_DENIED_CALLBACK_OBJECT (0x0c) with object-type Flags = 0 (no
+		// GUIDs): header + mask + flags(4) + sid. Size = 4 + 4 + 4 + 28 = 40 = 0x28.
+		{"access_denied_callback_object", "0c002800ff010f0000000000" + sid28},
+		// SYSTEM_AUDIT_CALLBACK (0x0d): header + mask + sid. Size = 4 + 4 + 28 = 36 = 0x24.
+		{"system_audit_callback", "0d002400ff010f00" + sid28},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rawBytes, err := hex.DecodeString(tc.hex)
+			if err != nil {
+				t.Fatalf("Failed to decode hex string: %v", err)
+			}
+
+			var ace AccessControlEntry
+			_, err = ace.Unmarshal(rawBytes)
+			if err != nil {
+				t.Fatalf("Failed to unmarshal AccessControlEntry: %v", err)
+			}
+
+			serializedBytes, err := ace.Marshal()
+			if err != nil {
+				t.Fatalf("Failed to marshal AccessControlEntry: %v", err)
+			}
+
+			if !bytes.Equal(rawBytes, serializedBytes) {
+				t.Errorf("Involution test failed: expected %s, got %s",
+					hex.EncodeToString(rawBytes), hex.EncodeToString(serializedBytes))
+			}
+		})
+	}
+}

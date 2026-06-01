@@ -731,6 +731,38 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
+	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK_OBJECT:
+		bytesStream, err = ace.Mask.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+		bytesStream, err = ace.AccessControlObjectType.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal AccessControlObjectType: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+		bytesStream, err = ace.Identity.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK:
+		bytesStream, err = ace.Mask.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
+		bytesStream, err = ace.Identity.Marshal()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Identity: %w", err)
+		}
+		marshalledData = append(marshalledData, bytesStream...)
+
 	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK:
 	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
 		bytesStream, err = ace.Mask.Marshal()
