@@ -92,3 +92,35 @@ func TestNtSecurityDescriptorControl_Unmarshal_TruncatedReturnsError(t *testing.
 		}
 	}
 }
+
+// TestNtSecurityDescriptorControl_WireValues asserts the control flag constants
+// match the MS-DTYP / winnt.h little-endian wire layout (SE_* values). A
+// regression here means descriptors marshaled by this library carry a malformed
+// Control word that NT servers reject. See issue #92.
+func TestNtSecurityDescriptorControl_WireValues(t *testing.T) {
+	cases := []struct {
+		name string
+		got  uint16
+		want uint16
+	}{
+		{"SE_OWNER_DEFAULTED", control.NT_SECURITY_DESCRIPTOR_CONTROL_OD, 0x0001},
+		{"SE_GROUP_DEFAULTED", control.NT_SECURITY_DESCRIPTOR_CONTROL_GD, 0x0002},
+		{"SE_DACL_PRESENT", control.NT_SECURITY_DESCRIPTOR_CONTROL_DP, 0x0004},
+		{"SE_DACL_DEFAULTED", control.NT_SECURITY_DESCRIPTOR_CONTROL_DD, 0x0008},
+		{"SE_SACL_PRESENT", control.NT_SECURITY_DESCRIPTOR_CONTROL_SP, 0x0010},
+		{"SE_SACL_DEFAULTED", control.NT_SECURITY_DESCRIPTOR_CONTROL_SD, 0x0020},
+		{"SE_DACL_AUTO_INHERIT_REQ", control.NT_SECURITY_DESCRIPTOR_CONTROL_DC, 0x0100},
+		{"SE_SACL_AUTO_INHERIT_REQ", control.NT_SECURITY_DESCRIPTOR_CONTROL_SC, 0x0200},
+		{"SE_DACL_AUTO_INHERITED", control.NT_SECURITY_DESCRIPTOR_CONTROL_DI, 0x0400},
+		{"SE_SACL_AUTO_INHERITED", control.NT_SECURITY_DESCRIPTOR_CONTROL_SI, 0x0800},
+		{"SE_DACL_PROTECTED", control.NT_SECURITY_DESCRIPTOR_CONTROL_PD, 0x1000},
+		{"SE_SACL_PROTECTED", control.NT_SECURITY_DESCRIPTOR_CONTROL_PS, 0x2000},
+		{"SE_RM_CONTROL_VALID", control.NT_SECURITY_DESCRIPTOR_CONTROL_RM, 0x4000},
+		{"SE_SELF_RELATIVE", control.NT_SECURITY_DESCRIPTOR_CONTROL_SR, 0x8000},
+	}
+	for _, tc := range cases {
+		if tc.got != tc.want {
+			t.Errorf("%s: got 0x%04x, want 0x%04x", tc.name, tc.got, tc.want)
+		}
+	}
+}
