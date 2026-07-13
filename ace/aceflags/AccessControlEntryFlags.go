@@ -2,6 +2,7 @@ package aceflags
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -86,16 +87,29 @@ func (aceflag *AccessControlEntryFlag) Unmarshal(marshalledData []byte) (int, er
 	aceflag.Values = []uint8{}
 	aceflag.Flags = []string{}
 
-	for flagValue, flagName := range AccessControlEntryFlagToName {
+	// Iterate the known flags in a deterministic (ascending value) order. Go
+	// randomizes map iteration order, so ranging AccessControlEntryFlagToName
+	// directly would fill Values/Flags in a nondeterministic order. Because
+	// Equal compares Values positionally, that made two flags parsed from the
+	// same byte compare unequal roughly half the time whenever more than one
+	// bit is set. Sorting the keys first (matching the idiom in
+	// ace/mask/AccessControlMask.go) makes the output stable.
+	flagValues := make([]uint8, 0, len(AccessControlEntryFlagToName))
+	for flagValue := range AccessControlEntryFlagToName {
 		// Skip the zero-valued NONE flag: its bitmask test is always true and
 		// would otherwise be reported for every ACE. It is handled explicitly
 		// below when no flag bits are set.
 		if flagValue == ACE_FLAG_NONE {
 			continue
 		}
+		flagValues = append(flagValues, flagValue)
+	}
+	sort.Slice(flagValues, func(i, j int) bool { return flagValues[i] < flagValues[j] })
+
+	for _, flagValue := range flagValues {
 		if (aceflag.RawValue & flagValue) == flagValue {
 			aceflag.Values = append(aceflag.Values, flagValue)
-			aceflag.Flags = append(aceflag.Flags, flagName)
+			aceflag.Flags = append(aceflag.Flags, AccessControlEntryFlagToName[flagValue])
 		}
 	}
 
