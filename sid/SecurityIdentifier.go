@@ -404,8 +404,16 @@ func (sid *SID) FromString(sidString string) error {
 	// Parse the identifier authority (S-<Revision>-<IdentifierAuthority>).
 	// The binary SID format stores this in 6 bytes (see MS-DTYP 2.4.2.1
 	// SID_IDENTIFIER_AUTHORITY), so reject values that cannot be represented
-	// rather than silently truncating them at marshal time.
-	identifierAuthority, err := strconv.ParseUint(parts[2], 10, 64)
+	// rather than silently truncating them at marshal time. Per MS-DTYP 2.4.2.1
+	// an identifier authority >= 2^32 is written in hexadecimal ("0x" followed
+	// by hex digits); smaller values are decimal.
+	authorityToken := parts[2]
+	var identifierAuthority uint64
+	if len(authorityToken) > 2 && (authorityToken[0:2] == "0x" || authorityToken[0:2] == "0X") {
+		identifierAuthority, err = strconv.ParseUint(authorityToken[2:], 16, 64)
+	} else {
+		identifierAuthority, err = strconv.ParseUint(authorityToken, 10, 64)
+	}
 	if err != nil {
 		return fmt.Errorf("invalid identifier authority in SID: %v", err)
 	}
@@ -451,13 +459,32 @@ func (sid *SID) FromString(sidString string) error {
 //     This includes the revision level, identifier authority, all sub-authorities, and the
 //     relative identifier (RID).
 func (sid *SID) ToString() string {
-	sidstring := fmt.Sprintf("S-%d-%d", sid.RevisionLevel, sid.IdentifierAuthority.Value)
+	// Per MS-DTYP 2.4.2.1, an identifier authority value less than 2^32 is
+	// written in decimal, while a value >= 2^32 is written in hexadecimal as
+	// "0x" followed by 12 hex digits.
+	var authorityStr string
+	if sid.IdentifierAuthority.Value >= (uint64(1) << 32) {
+		authorityStr = fmt.Sprintf("0x%012x", sid.IdentifierAuthority.Value)
+	} else {
+		authorityStr = fmt.Sprintf("%d", sid.IdentifierAuthority.Value)
+	}
+	sidstring := fmt.Sprintf("S-%d-%s", sid.RevisionLevel, authorityStr)
 
 	for k := range sid.SubAuthorities {
 		sidstring += fmt.Sprintf("-%d", sid.SubAuthorities[k])
 	}
 
-	sidstring += fmt.Sprintf("-%d", sid.RelativeIdentifier)
+	// Append the RID only when the SID actually carries a final sub-authority.
+	// A SID with no sub-authorities at all — SubAuthorityCount == 0, no entries
+	// in SubAuthorities, and a zero RID, e.g. the bare NT Authority SID S-1-5
+	// produced by Unmarshal — has no RID; appending RelativeIdentifier
+	// unconditionally fabricated a spurious trailing "-0", producing the string
+	// of a different SID. Any evidence of a RID (a non-zero count, prior
+	// sub-authorities, or a non-zero RID value) means one is present and must be
+	// emitted.
+	if sid.SubAuthorityCount > 0 || len(sid.SubAuthorities) > 0 || sid.RelativeIdentifier != 0 {
+		sidstring += fmt.Sprintf("-%d", sid.RelativeIdentifier)
+	}
 
 	return sidstring
 }
