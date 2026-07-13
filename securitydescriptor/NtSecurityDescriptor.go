@@ -6,6 +6,7 @@ import (
 
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/identity"
+	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
 	"github.com/TheManticoreProject/winacl/securitydescriptor/header"
 )
 
@@ -190,6 +191,15 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	} else {
 		ntsd.Header.OffsetGroup = 0
 	}
+
+	// Marshal always serializes the descriptor in self-relative format (every
+	// component location is expressed as an offset into this contiguous buffer),
+	// so the SE_SELF_RELATIVE control bit must be set. Per MS-DTYP 2.4.6 a
+	// self-relative descriptor is required to carry this bit; without it a
+	// spec-compliant consumer would interpret the offset fields as absolute
+	// pointers. AddControl is idempotent, so descriptors parsed from the wire
+	// (which already have the bit set) are unaffected.
+	ntsd.Header.Control.AddControl(control.NT_SECURITY_DESCRIPTOR_CONTROL_SR)
 
 	// Update the header and append the header bytes
 	marshalledData, err = ntsd.Header.Marshal()

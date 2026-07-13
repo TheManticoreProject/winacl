@@ -7,6 +7,7 @@ import (
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/acl/revision"
 	"github.com/TheManticoreProject/winacl/identity"
+	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
 	"github.com/TheManticoreProject/winacl/sid"
 )
 
@@ -278,6 +279,13 @@ func (ntsd *NtSecurityDescriptor) GetDacl() *acl.DiscretionaryAccessControlList 
 //   - dacl (acl.DiscretionaryAccessControlList): The new DACL field of the NtSecurityDescriptor.
 func (ntsd *NtSecurityDescriptor) SetDacl(dacl *acl.DiscretionaryAccessControlList) {
 	ntsd.DACL = dacl
+	// Attaching a DACL makes the descriptor's DACL present. Per MS-DTYP 2.4.6
+	// presence is signalled by the SE_DACL_PRESENT control bit, which Marshal
+	// relies on; without it a constructed descriptor would serialize a DACL
+	// offset while advertising "no DACL present" (a NULL, allow-all DACL).
+	if dacl != nil {
+		ntsd.Header.Control.AddControl(control.NT_SECURITY_DESCRIPTOR_CONTROL_DP)
+	}
 }
 
 // GetSacl returns the SACL field of the NtSecurityDescriptor.
@@ -294,6 +302,11 @@ func (ntsd *NtSecurityDescriptor) GetSacl() *acl.SystemAccessControlList {
 //   - sacl (acl.SystemAccessControlList): The new SACL field of the NtSecurityDescriptor.
 func (ntsd *NtSecurityDescriptor) SetSacl(sacl *acl.SystemAccessControlList) {
 	ntsd.SACL = sacl
+	// Attaching a SACL makes it present; signal that with SE_SACL_PRESENT so
+	// Marshal emits the SACL offset consistently (see SetDacl above).
+	if sacl != nil {
+		ntsd.Header.Control.AddControl(control.NT_SECURITY_DESCRIPTOR_CONTROL_SP)
+	}
 }
 
 // Equal compares two NtSecurityDescriptor instances for equality.
