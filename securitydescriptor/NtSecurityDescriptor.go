@@ -6,6 +6,7 @@ import (
 
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/identity"
+	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
 	"github.com/TheManticoreProject/winacl/securitydescriptor/header"
 )
 
@@ -136,9 +137,14 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 
 	offset := 20
 
-	// Marshal SACL
+	// Marshal SACL. A SACL that is present must be emitted even when it holds
+	// zero ACEs: per MS-DTYP 2.4.6, presence is governed by the SE_SACL_PRESENT
+	// control bit, and an empty-but-present SACL is semantically distinct from
+	// an absent (NULL) SACL. Gating solely on the ACE count would drop a
+	// present-but-empty SACL while leaving SE_SACL_PRESENT set, producing an
+	// inconsistent descriptor that no longer round-trips.
 	dataSacl := []byte{}
-	if ntsd.SACL != nil && len(ntsd.SACL.Entries) > 0 {
+	if ntsd.SACL != nil && (len(ntsd.SACL.Entries) > 0 || ntsd.Header.Control.HasControl(control.NT_SECURITY_DESCRIPTOR_CONTROL_SP)) {
 		dataSacl, err = ntsd.SACL.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal SACL: %w", err)
@@ -149,9 +155,12 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 		ntsd.Header.OffsetSacl = 0
 	}
 
-	// Marshal DACL
+	// Marshal DACL. See the SACL note above: a present-but-empty DACL
+	// (SE_DACL_PRESENT set, zero ACEs) must be preserved. Dropping it would
+	// silently convert an empty DACL (which denies all access) into an absent
+	// NULL DACL (which grants everyone full access).
 	dataDacl := []byte{}
-	if ntsd.DACL != nil && len(ntsd.DACL.Entries) > 0 {
+	if ntsd.DACL != nil && (len(ntsd.DACL.Entries) > 0 || ntsd.Header.Control.HasControl(control.NT_SECURITY_DESCRIPTOR_CONTROL_DP)) {
 		dataDacl, err = ntsd.DACL.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal DACL: %w", err)
