@@ -59,7 +59,7 @@ var SDDLToSID = map[string]string{
 	"SA": "S-1-5-21-0-0-0-518", // Schema Admins
 	"EA": "S-1-5-21-0-0-0-519", // Enterprise Admins
 	"PA": "S-1-5-21-0-0-0-520", // Group Policy Creator Owners
-	"RO": "S-1-5-21-0-0-0-521", // Read-Only Domain Controllers
+	"RO": "S-1-5-21-0-0-0-498", // Enterprise Read-Only Domain Controllers (SDDL_ENTERPRISE_RO_DCs)
 	"CN": "S-1-5-21-0-0-0-522", // Cloneable Domain Controllers
 	"RS": "S-1-5-21-0-0-0-553", // RAS Servers Group
 
