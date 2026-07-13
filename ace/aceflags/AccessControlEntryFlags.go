@@ -87,10 +87,21 @@ func (aceflag *AccessControlEntryFlag) Unmarshal(marshalledData []byte) (int, er
 	aceflag.Flags = []string{}
 
 	for flagValue, flagName := range AccessControlEntryFlagToName {
+		// Skip the zero-valued NONE flag: its bitmask test is always true and
+		// would otherwise be reported for every ACE. It is handled explicitly
+		// below when no flag bits are set.
+		if flagValue == ACE_FLAG_NONE {
+			continue
+		}
 		if (aceflag.RawValue & flagValue) == flagValue {
 			aceflag.Values = append(aceflag.Values, flagValue)
 			aceflag.Flags = append(aceflag.Flags, flagName)
 		}
+	}
+
+	if aceflag.RawValue == ACE_FLAG_NONE {
+		aceflag.Values = append(aceflag.Values, ACE_FLAG_NONE)
+		aceflag.Flags = append(aceflag.Flags, AccessControlEntryFlagToName[ACE_FLAG_NONE])
 	}
 
 	return 1, nil
