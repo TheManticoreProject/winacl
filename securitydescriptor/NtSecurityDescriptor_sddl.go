@@ -33,7 +33,7 @@ import (
 // Returns:
 //   - (int, error): Always returns 0 for the int value, and an error if parsing fails.
 func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error) {
-	ownerStr, groupStr, daclFlags, daclAces, saclFlags, saclAces, err := cutSDDL(sddlString)
+	ownerStr, groupStr, daclPresent, daclFlags, daclAces, saclPresent, saclFlags, saclAces, err := cutSDDL(sddlString)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse SDDL: %w", err)
 	}
@@ -60,8 +60,10 @@ func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error)
 		ntsd.Group.Name = groupSID.LookupName()
 	}
 
-	// Parse DACL
-	if len(daclAces) > 0 || daclFlags != "" {
+	// Parse DACL. A "D:" token, even with no ACEs and no flags, means the DACL
+	// is present (SE_DACL_PRESENT) — an empty DACL that denies all access, which
+	// is distinct from an absent (NULL) DACL that grants all access.
+	if daclPresent {
 		var entries []ntsd_ace.AccessControlEntry
 		if len(daclAces) > 0 {
 			var err error
@@ -88,8 +90,9 @@ func (ntsd *NtSecurityDescriptor) FromSDDLString(sddlString string) (int, error)
 		}
 	}
 
-	// Parse SACL
-	if len(saclAces) > 0 || saclFlags != "" {
+	// Parse SACL. As with the DACL, an "S:" token marks the SACL present even
+	// when it carries no ACEs.
+	if saclPresent {
 		var entries []ntsd_ace.AccessControlEntry
 		if len(saclAces) > 0 {
 			var err error
@@ -176,11 +179,13 @@ func (ntsd *NtSecurityDescriptor) ToSDDLString() (string, error) {
 
 // cutSDDL parses an SDDL string into its component parts.
 // This is a local copy to avoid circular imports with the sddl package.
-// Returns: owner, group, daclFlags, daclAces, saclFlags, saclAces, error
-func cutSDDL(sddlString string) (string, string, string, []string, string, []string, error) {
+// Returns: owner, group, daclPresent, daclFlags, daclAces, saclPresent, saclFlags, saclAces, error.
+// daclPresent/saclPresent report whether a D:/S: token appeared at all, so a
+// present-but-empty ACL ("D:" with no ACEs) is distinguished from an absent one.
+func cutSDDL(sddlString string) (string, string, bool, string, []string, bool, string, []string, error) {
 	sddlString = strings.TrimSpace(sddlString)
 	if len(sddlString) == 0 {
-		return "", "", "", nil, "", nil, nil
+		return "", "", false, "", nil, false, "", nil, nil
 	}
 
 	components := map[string]string{
@@ -189,32 +194,59 @@ func cutSDDL(sddlString string) (string, string, string, []string, string, []str
 		"D:": "",
 		"S:": "",
 	}
+	present := map[string]bool{}
 
 	currentComponent := ""
+	depth := 0
+	inQuote := false
 	k := 0
 	for k < len(sddlString) {
-		upperChar := strings.ToUpper(string(sddlString[k]))
-		if k+1 < len(sddlString) && (upperChar == "O" || upperChar == "G" || upperChar == "D" || upperChar == "S") && sddlString[k+1] == ':' {
-			currentComponent = upperChar + ":"
-			k += 2
-			continue
+		c := sddlString[k]
+
+		// Recognize an O:/G:/D:/S: section marker only at the top level, i.e.
+		// outside any ACE parentheses and outside a quoted string literal. A
+		// conditional expression or resource-attribute value inside an ACE may
+		// legally contain a substring like "D:" (e.g. a Windows path or an
+		// arbitrary string attribute), which must not start a new component.
+		if depth == 0 && !inQuote && k+1 < len(sddlString) && sddlString[k+1] == ':' {
+			upperChar := strings.ToUpper(string(c))
+			if upperChar == "O" || upperChar == "G" || upperChar == "D" || upperChar == "S" {
+				currentComponent = upperChar + ":"
+				present[currentComponent] = true
+				k += 2
+				continue
+			}
 		}
+
+		// Track quote and (outside quotes) parenthesis nesting so markers are
+		// only detected between top-level components.
+		switch {
+		case c == '"':
+			inQuote = !inQuote
+		case !inQuote && c == '(':
+			depth++
+		case !inQuote && c == ')':
+			if depth > 0 {
+				depth--
+			}
+		}
+
 		if currentComponent != "" {
-			components[currentComponent] += string(sddlString[k])
+			components[currentComponent] += string(c)
 		}
 		k++
 	}
 
 	daclFlags, daclAces, err := cutAces(components["D:"])
 	if err != nil {
-		return "", "", "", nil, "", nil, fmt.Errorf("DACL: %w", err)
+		return "", "", false, "", nil, false, "", nil, fmt.Errorf("DACL: %w", err)
 	}
 	saclFlags, saclAces, err := cutAces(components["S:"])
 	if err != nil {
-		return "", "", "", nil, "", nil, fmt.Errorf("SACL: %w", err)
+		return "", "", false, "", nil, false, "", nil, fmt.Errorf("SACL: %w", err)
 	}
 
-	return components["O:"], components["G:"], daclFlags, daclAces, saclFlags, saclAces, nil
+	return components["O:"], components["G:"], present["D:"], daclFlags, daclAces, present["S:"], saclFlags, saclAces, nil
 }
 
 // cutAces extracts the ACL flags prefix and individual ACE strings from a DACL/SACL component.
@@ -231,9 +263,20 @@ func cutAces(aclStr string) (string, []string, error) {
 	aclFlags := strings.TrimSpace(aclStr[:start])
 
 	depth := 0
+	inQuote := false
 	aceStart := start
 	for i := start; i < len(aclStr); i++ {
-		switch aclStr[i] {
+		c := aclStr[i]
+		// Parentheses inside a quoted string literal (in a conditional
+		// expression or resource-attribute value) are data, not ACE delimiters.
+		if c == '"' {
+			inQuote = !inQuote
+			continue
+		}
+		if inQuote {
+			continue
+		}
+		switch c {
 		case '(':
 			if depth == 0 {
 				aceStart = i + 1
