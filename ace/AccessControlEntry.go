@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	"github.com/TheManticoreProject/winacl/ace/acetype"
+	"github.com/TheManticoreProject/winacl/ace/condition"
 	"github.com/TheManticoreProject/winacl/ace/header"
 	"github.com/TheManticoreProject/winacl/ace/mask"
+	"github.com/TheManticoreProject/winacl/ace/resourceattribute"
 	"github.com/TheManticoreProject/winacl/identity"
 	"github.com/TheManticoreProject/winacl/object"
 )
@@ -946,8 +948,48 @@ func (ace *AccessControlEntry) Describe(indent int) {
 	}
 
 	if len(ace.ApplicationData) > 0 {
-		fmt.Printf("%s │ \x1b[93mApplicationData\x1b[0m : \x1b[96m%s\x1b[0m\n", indentPrompt, hex.EncodeToString(ace.ApplicationData))
+		ace.describeApplicationData(indent + 1)
 	}
 
 	fmt.Printf("%s └─\n", indentPrompt)
+}
+
+// describeApplicationData prints the ACE's ApplicationData as a subtree. For a
+// callback ACE carrying a conditional expression it shows the ACE_CONDITION
+// signature ("artx") magic bytes and the decoded expression; for a
+// resource-attribute ACE it shows the decoded CLAIM attribute; otherwise it
+// falls back to the raw bytes. The raw bytes are always shown so nothing is
+// hidden if decoding is partial.
+func (ace *AccessControlEntry) describeApplicationData(indent int) {
+	p := strings.Repeat(" │ ", indent)
+	rawHex := hex.EncodeToString(ace.ApplicationData)
+
+	fmt.Printf("%s\x1b[93m<ApplicationData>\x1b[0m\n", p)
+
+	switch {
+	case condition.IsConditional(ace.ApplicationData):
+		sig := ace.ApplicationData[:4]
+		fmt.Printf("%s │ \x1b[93mType\x1b[0m      : \x1b[94mConditional Expression\x1b[0m\n", p)
+		fmt.Printf("%s │ \x1b[93mSignature\x1b[0m : \x1b[96m0x%s\x1b[0m (\x1b[94m%s\x1b[0m)\n", p, hex.EncodeToString(sig), string(sig))
+		if expr, err := condition.Unmarshal(ace.ApplicationData); err == nil {
+			fmt.Printf("%s │ \x1b[93mCondition\x1b[0m : \x1b[96m(%s)\x1b[0m\n", p, expr)
+		} else {
+			fmt.Printf("%s │ \x1b[93mCondition\x1b[0m : \x1b[91m<unparsed: %s>\x1b[0m\n", p, err)
+		}
+		fmt.Printf("%s │ \x1b[93mRawBytes\x1b[0m  : \x1b[96m%s\x1b[0m\n", p, rawHex)
+
+	case ace.Header.Type.Value == acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
+		fmt.Printf("%s │ \x1b[93mType\x1b[0m      : \x1b[94mResource Attribute (CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)\x1b[0m\n", p)
+		if attr, err := resourceattribute.Unmarshal(ace.ApplicationData); err == nil {
+			fmt.Printf("%s │ \x1b[93mAttribute\x1b[0m : \x1b[96m(%s)\x1b[0m\n", p, attr)
+		} else {
+			fmt.Printf("%s │ \x1b[93mAttribute\x1b[0m : \x1b[91m<unparsed: %s>\x1b[0m\n", p, err)
+		}
+		fmt.Printf("%s │ \x1b[93mRawBytes\x1b[0m  : \x1b[96m%s\x1b[0m\n", p, rawHex)
+
+	default:
+		fmt.Printf("%s │ \x1b[93mRawBytes\x1b[0m : \x1b[96m%s\x1b[0m\n", p, rawHex)
+	}
+
+	fmt.Printf("%s └─\n", p)
 }
