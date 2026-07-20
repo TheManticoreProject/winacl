@@ -8,6 +8,7 @@ import (
 	ntsd_ace "github.com/TheManticoreProject/winacl/ace"
 	"github.com/TheManticoreProject/winacl/ace/aceflags"
 	"github.com/TheManticoreProject/winacl/ace/acetype"
+	"github.com/TheManticoreProject/winacl/ace/condition"
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/acl/revision"
 	"github.com/TheManticoreProject/winacl/guid"
@@ -372,7 +373,40 @@ func sddlParseACE(aceStr string) (*ntsd_ace.AccessControlEntry, error) {
 		ace.Identity.Name = parsedSID.LookupName()
 	}
 
+	// Parse the optional conditional expression (7th field), present on callback
+	// ACE types (XA/XD/XU/ZA). It is compiled into the binary conditional-ACE
+	// format (MS-DTYP 2.4.4.17.1) and stored as the ACE's ApplicationData.
+	// Fields 6+ are rejoined in case the expression itself contained a ';'.
+	if len(parts) > 6 {
+		condStr := strings.TrimSpace(strings.Join(parts[6:], ";"))
+		if condStr != "" {
+			if !isConditionalACEType(ace.Header.Type.Value) {
+				return nil, fmt.Errorf("conditional expression present on non-callback ACE type '%s'", aceTypeStr)
+			}
+			appData, err := condition.Marshal(condStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse conditional expression '%s': %w", condStr, err)
+			}
+			ace.ApplicationData = appData
+		}
+	}
+
 	return ace, nil
+}
+
+// isConditionalACEType reports whether an ACE type is a callback type that can
+// carry a conditional expression in its ApplicationData.
+func isConditionalACEType(typeVal uint8) bool {
+	switch typeVal {
+	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK,
+		acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK,
+		acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT,
+		acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK_OBJECT,
+		acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK,
+		acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
+		return true
+	}
+	return false
 }
 
 // sddlParseACEFlags parses an SDDL ACE flags string into a combined uint8 value.
@@ -460,7 +494,21 @@ func sddlACEToString(ace *ntsd_ace.AccessControlEntry) (string, error) {
 		parts[5] = sddlSIDToString(&ace.Identity.SID)
 	}
 
-	return strings.Join(parts[:], ";"), nil
+	fields := parts[:]
+
+	// Conditional expression (7th field). If the ACE carries a conditional
+	// expression in its ApplicationData (callback ACE types), decode it back to
+	// SDDL text wrapped in parentheses, so it survives the round-trip instead of
+	// being dropped.
+	if condition.IsConditional(ace.ApplicationData) {
+		exprText, err := condition.Unmarshal(ace.ApplicationData)
+		if err != nil {
+			return "", fmt.Errorf("failed to serialize conditional expression: %w", err)
+		}
+		fields = append(fields, "("+exprText+")")
+	}
+
+	return strings.Join(fields, ";"), nil
 }
 
 // sddlACETypeToString converts an ACE type value to its SDDL abbreviation.
