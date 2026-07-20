@@ -29,8 +29,12 @@ func (acm *AccessControlMask) Unmarshal(marshalledData []byte) (int, error) {
 		return 0, fmt.Errorf("AccessControlMask unmarshal requires at least 4 bytes, got %d", len(marshalledData))
 	}
 
-	// Store the raw bytes and set the size
-	acm.RawBytes = marshalledData
+	// Store exactly the 4 bytes of the ACCESS_MASK (MS-DTYP 2.4.3). The caller
+	// passes the whole remaining ACE body (mask + SID + application data), so
+	// slicing to [:4] avoids aliasing the variable-length remainder into
+	// RawBytes — which otherwise made Equal (a byte comparison of RawBytes)
+	// report two identical masks as unequal when their ACE tails differed.
+	acm.RawBytes = marshalledData[:4]
 	acm.RawBytesSize = 4
 
 	// Convert raw bytes to a uint32 value using little-endian format
