@@ -81,31 +81,11 @@ func (nsdc *NtSecurityDescriptorControl) Equal(other *NtSecurityDescriptorContro
 		return nsdc == other
 	}
 
-	if nsdc.RawValue != other.RawValue {
-		return false
-	}
-
-	if len(nsdc.Values) != len(other.Values) {
-		return false
-	}
-
-	if len(nsdc.Flags) != len(other.Flags) {
-		return false
-	}
-
-	// Compare Values slices
-	for i, value := range nsdc.Values {
-		if value != other.Values[i] {
-			return false
-		}
-	}
-
-	// Compare Flags slices
-	for i, flag := range nsdc.Flags {
-		if flag != other.Flags[i] {
-			return false
-		}
-	}
-
-	return true
+	// RawValue is the single 16-bit SECURITY_DESCRIPTOR_CONTROL word (MS-DTYP
+	// 2.4.6) and fully, canonically encodes the set of control bits. The Values
+	// and Flags slices are merely a derived, per-bit view built by Unmarshal via
+	// Go map iteration, whose order is randomized; comparing them positionally
+	// made two controls decoded from identical bytes compare unequal about half
+	// the time. Equality is therefore defined by RawValue alone.
+	return nsdc.RawValue == other.RawValue
 }
