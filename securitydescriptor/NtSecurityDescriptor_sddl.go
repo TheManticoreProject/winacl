@@ -9,6 +9,7 @@ import (
 	"github.com/TheManticoreProject/winacl/ace/aceflags"
 	"github.com/TheManticoreProject/winacl/ace/acetype"
 	"github.com/TheManticoreProject/winacl/ace/condition"
+	"github.com/TheManticoreProject/winacl/ace/resourceattribute"
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/acl/revision"
 	"github.com/TheManticoreProject/winacl/guid"
@@ -373,21 +374,31 @@ func sddlParseACE(aceStr string) (*ntsd_ace.AccessControlEntry, error) {
 		ace.Identity.Name = parsedSID.LookupName()
 	}
 
-	// Parse the optional conditional expression (7th field), present on callback
-	// ACE types (XA/XD/XU/ZA). It is compiled into the binary conditional-ACE
-	// format (MS-DTYP 2.4.4.17.1) and stored as the ACE's ApplicationData.
-	// Fields 6+ are rejoined in case the expression itself contained a ';'.
+	// Parse the optional 7th field. Callback ACE types (XA/XD/XU/ZA) carry a
+	// conditional expression compiled into the MS-DTYP 2.4.4.17.1 format;
+	// resource-attribute ACEs (RA) carry attribute-data compiled into a
+	// CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 (MS-DTYP 2.4.10.1). Either way the
+	// result is stored as the ACE's ApplicationData. Fields 6+ are rejoined in
+	// case the value itself contained a ';'.
 	if len(parts) > 6 {
-		condStr := strings.TrimSpace(strings.Join(parts[6:], ";"))
-		if condStr != "" {
-			if !isConditionalACEType(ace.Header.Type.Value) {
-				return nil, fmt.Errorf("conditional expression present on non-callback ACE type '%s'", aceTypeStr)
+		trailer := strings.TrimSpace(strings.Join(parts[6:], ";"))
+		if trailer != "" {
+			switch {
+			case isConditionalACEType(ace.Header.Type.Value):
+				appData, err := condition.Marshal(trailer)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse conditional expression '%s': %w", trailer, err)
+				}
+				ace.ApplicationData = appData
+			case ace.Header.Type.Value == acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
+				appData, err := resourceattribute.Marshal(trailer)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse resource attribute '%s': %w", trailer, err)
+				}
+				ace.ApplicationData = appData
+			default:
+				return nil, fmt.Errorf("trailing data present on ACE type '%s' that supports no 7th field", aceTypeStr)
 			}
-			appData, err := condition.Marshal(condStr)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse conditional expression '%s': %w", condStr, err)
-			}
-			ace.ApplicationData = appData
 		}
 	}
 
@@ -496,16 +507,23 @@ func sddlACEToString(ace *ntsd_ace.AccessControlEntry) (string, error) {
 
 	fields := parts[:]
 
-	// Conditional expression (7th field). If the ACE carries a conditional
-	// expression in its ApplicationData (callback ACE types), decode it back to
-	// SDDL text wrapped in parentheses, so it survives the round-trip instead of
+	// 7th field. A callback ACE carrying a conditional expression, or a
+	// resource-attribute ACE carrying CLAIM attribute-data, is decoded back to
+	// SDDL text wrapped in parentheses so it survives the round-trip instead of
 	// being dropped.
-	if condition.IsConditional(ace.ApplicationData) {
+	switch {
+	case condition.IsConditional(ace.ApplicationData):
 		exprText, err := condition.Unmarshal(ace.ApplicationData)
 		if err != nil {
 			return "", fmt.Errorf("failed to serialize conditional expression: %w", err)
 		}
 		fields = append(fields, "("+exprText+")")
+	case ace.Header.Type.Value == acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE && len(ace.ApplicationData) > 0:
+		attrText, err := resourceattribute.Unmarshal(ace.ApplicationData)
+		if err != nil {
+			return "", fmt.Errorf("failed to serialize resource attribute: %w", err)
+		}
+		fields = append(fields, "("+attrText+")")
 	}
 
 	return strings.Join(fields, ";"), nil
