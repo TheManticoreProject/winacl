@@ -74,8 +74,15 @@ func serializeUnary(v *UnaryOp) string {
 	case tokenExists, tokenNotExists:
 		return operatorNames[v.Op] + " " + serializeNode(v.Operand, 0)
 	default:
-		// Member_of family: `Member_of {SID(...), ...}`.
-		return operatorNames[v.Op] + " " + serializeNode(v.Operand, 0)
+		// Member_of family: the SDDL text form requires the operand to be a
+		// brace-delimited SID array (`Member_of {SID(...), ...}`). The binary
+		// form also permits a bare SID literal operand (MS-DTYP 2.4.4.17.6), so
+		// wrap a non-composite operand in braces to produce re-parseable text.
+		operand := serializeNode(v.Operand, 0)
+		if _, isComposite := v.Operand.(*Composite); !isComposite {
+			operand = "{" + operand + "}"
+		}
+		return operatorNames[v.Op] + " " + operand
 	}
 }
 
@@ -110,25 +117,31 @@ func attributeText(a *Attribute) string {
 }
 
 func intText(v *IntLiteral) string {
+	// Format the magnitude in the recorded base, then re-apply the sign, so a
+	// negative hex/octal literal keeps its base (e.g. -0x5 stays hex) and its
+	// Base byte round-trips. uint64(-v.Value) yields the correct magnitude even
+	// for math.MinInt64 (two's-complement wraparound).
+	neg := v.Value < 0
+	var mag uint64
+	if neg {
+		mag = uint64(-v.Value)
+	} else {
+		mag = uint64(v.Value)
+	}
+
 	var body string
 	switch v.Base {
 	case baseHex:
-		if v.Value >= 0 {
-			body = "0x" + strconv.FormatInt(v.Value, 16)
-		} else {
-			body = strconv.FormatInt(v.Value, 10)
-		}
+		body = "0x" + strconv.FormatUint(mag, 16)
 	case baseOctal:
-		if v.Value >= 0 {
-			body = "0" + strconv.FormatInt(v.Value, 8)
-		} else {
-			body = strconv.FormatInt(v.Value, 10)
-		}
+		body = "0" + strconv.FormatUint(mag, 8)
 	default:
-		body = strconv.FormatInt(v.Value, 10)
+		body = strconv.FormatUint(mag, 10)
 	}
-	// A negative value already carries its '-'; only add an explicit '+'.
-	if v.Sign == signPositive && v.Value >= 0 {
+
+	if neg {
+		body = "-" + body
+	} else if v.Sign == signPositive {
 		body = "+" + body
 	}
 	return body
