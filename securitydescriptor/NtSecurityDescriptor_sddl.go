@@ -559,27 +559,15 @@ func sddlRightsToString(maskVal uint32, aceType uint8) string {
 		return ""
 	}
 
-	// Try composite rights first (exact match)
-	compositeRights := []struct {
-		value uint32
-		sddl  string
-	}{
-		{0x001F01FF, "FA"}, // FILE_ALL_ACCESS
-		{0x000F003F, "KA"}, // KEY_ALL_ACCESS
-	}
-	for _, cr := range compositeRights {
-		if maskVal == cr.value {
-			return cr.sddl
-		}
-	}
+	// The MS-DTYP ace-rights field is either a concatenation of two-letter right
+	// aliases OR a single numeric value, never a mix (MS-DTYP 2.5.1.1). Emitting
+	// aliases plus a trailing "0x..." remainder (as the previous implementation
+	// did, e.g. "RCWPLO0x00100000" for FILE_GENERIC_EXECUTE) produces a string
+	// that cannot be parsed back. Every branch below therefore yields either a
+	// pure alias string or a single hex value.
 
-	// For mandatory label ACEs, use NR/NW/NX abbreviations
-	isMandatoryLabel := aceType == acetype.ACE_TYPE_SYSTEM_MANDATORY_LABEL
-
-	var sb strings.Builder
-	remaining := maskVal
-
-	if isMandatoryLabel {
+	// Mandatory-label ACEs use the NR/NW/NX aliases exclusively.
+	if aceType == acetype.ACE_TYPE_SYSTEM_MANDATORY_LABEL {
 		mandatoryRights := []struct {
 			value uint32
 			sddl  string
@@ -588,14 +576,27 @@ func sddlRightsToString(maskVal uint32, aceType uint8) string {
 			{0x00000002, "NW"}, // SYSTEM_MANDATORY_LABEL_NO_WRITE_UP
 			{0x00000004, "NX"}, // SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP
 		}
+		var sb strings.Builder
+		remaining := maskVal
 		for _, mr := range mandatoryRights {
 			if remaining&mr.value == mr.value {
 				sb.WriteString(mr.sddl)
 				remaining &^= mr.value
 			}
 		}
+		if remaining != 0 {
+			return fmt.Sprintf("0x%x", maskVal)
+		}
+		return sb.String()
 	}
 
+	// Exact match against a known alias (composite such as FA/FR/FW/FX/KA/KR/KW
+	// or a single-bit right), so common masks render as Windows does.
+	if s, ok := sddl_rights.RightToSDDL[maskVal]; ok {
+		return s
+	}
+
+	// Otherwise decompose into individual right aliases.
 	orderedRights := []struct {
 		value uint32
 		sddl  string
@@ -622,6 +623,8 @@ func sddlRightsToString(maskVal uint32, aceType uint8) string {
 		{0x00000100, "CR"},
 	}
 
+	var sb strings.Builder
+	remaining := maskVal
 	for _, or := range orderedRights {
 		if remaining&or.value == or.value {
 			sb.WriteString(or.sddl)
@@ -629,8 +632,11 @@ func sddlRightsToString(maskVal uint32, aceType uint8) string {
 		}
 	}
 
+	// If any bits are left over, the alias set cannot represent the mask
+	// exactly; emit the whole value as a single hex number instead, which
+	// round-trips through sddlParseRights.
 	if remaining != 0 {
-		sb.WriteString(fmt.Sprintf("0x%08x", remaining))
+		return fmt.Sprintf("0x%x", maskVal)
 	}
 
 	return sb.String()
