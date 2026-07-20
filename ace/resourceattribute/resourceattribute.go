@@ -475,21 +475,33 @@ func parseIntAuto(s string) (int64, error) {
 	} else if strings.HasPrefix(body, "+") {
 		body = body[1:]
 	}
-	var v int64
-	var err error
-	switch {
-	case strings.HasPrefix(body, "0x") || strings.HasPrefix(body, "0X"):
-		v, err = strconv.ParseInt(body[2:], 16, 64)
-	default:
-		v, err = strconv.ParseInt(body, 10, 64)
+
+	// Parse the magnitude as an unsigned 64-bit value so the full signed LONG64
+	// range is reachable. Parsing the magnitude with strconv.ParseInt would
+	// reject the most-negative value (-9223372036854775808), whose magnitude
+	// 2^63 exceeds math.MaxInt64.
+	base := 10
+	if strings.HasPrefix(body, "0x") || strings.HasPrefix(body, "0X") {
+		base = 16
+		body = body[2:]
 	}
+	mag, err := strconv.ParseUint(body, base, 64)
 	if err != nil {
 		return 0, err
 	}
+
 	if neg {
-		v = -v
+		if mag > uint64(1)<<63 { // > 2^63, i.e. below math.MinInt64
+			return 0, fmt.Errorf("integer %q is out of the signed 64-bit range", s)
+		}
+		// int64(-mag) via unsigned two's-complement wraparound yields the correct
+		// value for every magnitude up to and including 2^63 (math.MinInt64).
+		return int64(-mag), nil
 	}
-	return v, nil
+	if mag > uint64(1)<<63-1 { // > 2^63-1, i.e. above math.MaxInt64
+		return 0, fmt.Errorf("integer %q is out of the signed 64-bit range", s)
+	}
+	return int64(mag), nil
 }
 
 func parseUintAuto(s string) (uint64, error) {
