@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TheManticoreProject/winacl/sid/authority"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 const (
@@ -500,24 +501,41 @@ func (sid *SID) String() string {
 // Parameters:
 //   - indent (int): The indentation level for formatting the output. Each level increases
 //     the indentation depth, allowing for a hierarchical display of the SID's components.
-func (sid *SID) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-
-	fmt.Printf("%s<SID '%s'>\n", indentPrompt, sid.ToString())
-	fmt.Printf("%s │ \x1b[93mRevisionLevel\x1b[0m        : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, sid.RevisionLevel)
-	fmt.Printf("%s │ \x1b[93mSubAuthorityCount\x1b[0m    : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, sid.SubAuthorityCount)
-	fmt.Printf("%s │ \x1b[93mIdentifierAuthority\x1b[0m  : \x1b[96m0x%012x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, sid.IdentifierAuthority, sid.IdentifierAuthority.String())
-
-	if sid.SubAuthorityCount != 0 {
-		fmt.Printf("%s │ \x1b[93mSubAuthorities (%03d)\x1b[0m :\n", indentPrompt, sid.SubAuthorityCount)
-		for index, subauthority := range sid.SubAuthorities {
-			fmt.Printf("%s │ \x1b[93mSubAuthority %02d\x1b[0m   : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", strings.Repeat(" │ ", indent+1), index, subauthority, subauthority)
-		}
-		fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-	} else {
-		fmt.Printf("%s │ \x1b[93mSubAuthorities (0)\x1b[0m   : Empty\n", indentPrompt)
+//
+// DescribeList returns the SID description as a list of lines at indentation
+// depth 0.
+func (sid *SID) DescribeList() []string {
+	lines := []string{
+		fmt.Sprintf("<SID '%s'>", sid.ToString()),
+		fmt.Sprintf(" │ \x1b[93mRevisionLevel\x1b[0m        : \x1b[96m0x%02x\x1b[0m", sid.RevisionLevel),
+		fmt.Sprintf(" │ \x1b[93mSubAuthorityCount\x1b[0m    : \x1b[96m0x%02x\x1b[0m", sid.SubAuthorityCount),
+		fmt.Sprintf(" │ \x1b[93mIdentifierAuthority\x1b[0m  : \x1b[96m0x%012x\x1b[0m (\x1b[94m%s\x1b[0m)", sid.IdentifierAuthority, sid.IdentifierAuthority.String()),
 	}
 
-	fmt.Printf("%s │ \x1b[93mRelativeIdentifier\x1b[0m   : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, sid.RelativeIdentifier, sid.RelativeIdentifier)
-	fmt.Printf("%s └─\n", indentPrompt)
+	if sid.SubAuthorityCount != 0 {
+		lines = append(lines, fmt.Sprintf(" │ \x1b[93mSubAuthorities (%03d)\x1b[0m :", sid.SubAuthorityCount))
+		for index, subauthority := range sid.SubAuthorities {
+			lines = append(lines, describe.Unit+fmt.Sprintf(" │ \x1b[93mSubAuthority %02d\x1b[0m   : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)", index, subauthority, subauthority))
+		}
+		lines = append(lines, describe.Unit+" └─")
+	} else {
+		lines = append(lines, " │ \x1b[93mSubAuthorities (0)\x1b[0m   : Empty")
+	}
+
+	lines = append(lines,
+		fmt.Sprintf(" │ \x1b[93mRelativeIdentifier\x1b[0m   : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)", sid.RelativeIdentifier, sid.RelativeIdentifier),
+		" └─",
+	)
+
+	return lines
+}
+
+// DescribeWithCallback renders the SID at the given indentation depth, routing
+// each line to the provided fmt.Printf-like callback.
+func (sid *SID) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, sid.DescribeList(), printf)
+}
+
+func (sid *SID) Describe(indent int) {
+	sid.DescribeWithCallback(indent, fmt.Printf)
 }

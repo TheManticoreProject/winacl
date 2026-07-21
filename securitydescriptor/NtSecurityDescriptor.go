@@ -2,12 +2,12 @@ package securitydescriptor
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/acl"
 	"github.com/TheManticoreProject/winacl/identity"
 	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
 	"github.com/TheManticoreProject/winacl/securitydescriptor/header"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // ntSecurityDescriptorHeaderSize is the fixed size, in bytes, of the security
@@ -235,80 +235,71 @@ func (ntsd *NtSecurityDescriptor) Marshal() ([]byte, error) {
 	return marshalledData, nil
 }
 
+// DescribeList returns the NtSecurityDescriptor description as a list of lines
+// at indentation depth 0, nesting the header, owner, group and ACLs one level
+// deeper. The DACL/SACL are ordered to match their on-the-wire offsets.
+func (ntsd *NtSecurityDescriptor) DescribeList() []string {
+	lines := []string{"<NTSecurityDescriptor>"}
+
+	lines = append(lines, describe.Nest(ntsd.Header.DescribeList())...)
+
+	if ntsd.Owner != nil {
+		owner := []string{"<Owner>"}
+		owner = append(owner, describe.Nest(ntsd.Owner.DescribeList())...)
+		owner = append(owner, " └─")
+		lines = append(lines, describe.Nest(owner)...)
+	}
+
+	if ntsd.Group != nil {
+		group := []string{"<Group>"}
+		group = append(group, describe.Nest(ntsd.Group.DescribeList())...)
+		group = append(group, " └─")
+		lines = append(lines, describe.Nest(group)...)
+	}
+
+	describeDACL := func() []string {
+		if ntsd.DACL != nil {
+			if len(ntsd.DACL.Entries) > 0 {
+				return describe.Nest(ntsd.DACL.DescribeList())
+			}
+			return describe.Nest([]string{"<DiscretionaryAccessControlList is \x1b[93mempty\x1b[0m>", " └─"})
+		}
+		return describe.Nest([]string{"<DiscretionaryAccessControlList is \x1b[91mnot present\x1b[0m>", " └─"})
+	}
+
+	describeSACL := func() []string {
+		if ntsd.SACL != nil {
+			if len(ntsd.SACL.Entries) > 0 {
+				return describe.Nest(ntsd.SACL.DescribeList())
+			}
+			return describe.Nest([]string{"<SystemAccessControlList is \x1b[93mempty\x1b[0m>", " └─"})
+		}
+		return describe.Nest([]string{"<SystemAccessControlList is \x1b[91mnot present\x1b[0m>", " └─"})
+	}
+
+	if ntsd.Header.OffsetSacl > ntsd.Header.OffsetDacl {
+		lines = append(lines, describeDACL()...)
+		lines = append(lines, describeSACL()...)
+	} else {
+		lines = append(lines, describeSACL()...)
+		lines = append(lines, describeDACL()...)
+	}
+
+	lines = append(lines, " └─")
+
+	return lines
+}
+
+// DescribeWithCallback renders the NtSecurityDescriptor at the given
+// indentation depth, routing each line to the provided fmt.Printf-like callback.
+func (ntsd *NtSecurityDescriptor) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, ntsd.DescribeList(), printf)
+}
+
 // Describe prints the NtSecurityDescriptor in a human-readable format.
 //
 // Parameters:
 //   - indent (int): The indentation level for the output.
 func (ntsd *NtSecurityDescriptor) Describe(indent int) {
-	fmt.Println("<NTSecurityDescriptor>")
-
-	ntsd.Header.Describe(indent + 1)
-
-	if ntsd.Owner != nil {
-		fmt.Printf("%s<Owner>\n", strings.Repeat(" │ ", indent+1))
-		ntsd.Owner.Describe(indent + 2)
-		fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-	}
-
-	if ntsd.Group != nil {
-		fmt.Printf("%s<Group>\n", strings.Repeat(" │ ", indent+1))
-		ntsd.Group.Describe(indent + 2)
-		fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-	}
-
-	if ntsd.Header.OffsetSacl > ntsd.Header.OffsetDacl {
-		// Print DACL
-		if ntsd.DACL != nil {
-			if len(ntsd.DACL.Entries) > 0 {
-				ntsd.DACL.Describe(indent + 1)
-			} else {
-				fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-			}
-		} else {
-			fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-		}
-
-		// Print SACL
-		if ntsd.SACL != nil {
-			if len(ntsd.SACL.Entries) > 0 {
-				ntsd.SACL.Describe(indent + 1)
-			} else {
-				fmt.Printf("%s<SystemAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-			}
-		} else {
-			fmt.Printf("%s<SystemAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-		}
-	} else {
-		// Print SACL
-		if ntsd.SACL != nil {
-			if len(ntsd.SACL.Entries) > 0 {
-				ntsd.SACL.Describe(indent + 1)
-			} else {
-				fmt.Printf("%s<SystemAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-			}
-		} else {
-			fmt.Printf("%s<SystemAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-		}
-
-		// Print DACL
-		if ntsd.DACL != nil {
-			if len(ntsd.DACL.Entries) > 0 {
-				ntsd.DACL.Describe(indent + 1)
-			} else {
-				fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[93mempty\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-				fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-			}
-		} else {
-			fmt.Printf("%s<DiscretionaryAccessControlList is \x1b[91mnot present\x1b[0m>\n", strings.Repeat(" │ ", indent+1))
-			fmt.Printf("%s └─\n", strings.Repeat(" │ ", indent+1))
-		}
-	}
-
-	fmt.Println(" └─")
+	ntsd.DescribeWithCallback(indent, fmt.Printf)
 }

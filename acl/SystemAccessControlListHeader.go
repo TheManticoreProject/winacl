@@ -3,9 +3,9 @@ package acl
 import (
 	"encoding/binary"
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/acl/revision"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // SystemAccessControlListHeader represents the header of a System Access Control List (SACL).
@@ -93,19 +93,26 @@ func (saclheader *SystemAccessControlListHeader) Marshal() ([]byte, error) {
 	return marshalledData, nil
 }
 
-// Describe prints a detailed description of the SystemAccessControlListHeader struct,
-// including its attributes formatted with indentation for clarity.
-//
-// Parameters:
-//   - indent (int): The indentation level for formatting the output. Each level increases
-//     the indentation depth, allowing for a hierarchical display of the SACL's components.
+// DescribeList returns the SystemAccessControlListHeader description as a list
+// of lines at indentation depth 0.
+func (saclheader *SystemAccessControlListHeader) DescribeList() []string {
+	return []string{
+		"<SystemAccessControlListHeader>",
+		fmt.Sprintf(" │ \x1b[93mRevision\x1b[0m : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)", saclheader.Revision.Value, saclheader.Revision.String()),
+		fmt.Sprintf(" │ \x1b[93mSbz1\x1b[0m     : \x1b[96m0x%02x\x1b[0m", saclheader.Sbz1),
+		fmt.Sprintf(" │ \x1b[93mAclSize\x1b[0m  : \x1b[96m0x%04x\x1b[0m", saclheader.AclSize),
+		fmt.Sprintf(" │ \x1b[93mAceCount\x1b[0m : \x1b[96m0x%04x\x1b[0m (%d)\x1b[0m", saclheader.AceCount, saclheader.AceCount),
+		fmt.Sprintf(" │ \x1b[93mSbz2\x1b[0m     : \x1b[96m0x%04x\x1b[0m", saclheader.Sbz2),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the SystemAccessControlListHeader at the given
+// indentation depth, routing each line to the provided fmt.Printf-like callback.
+func (saclheader *SystemAccessControlListHeader) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, saclheader.DescribeList(), printf)
+}
+
 func (saclheader *SystemAccessControlListHeader) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-	fmt.Printf("%s<SystemAccessControlListHeader>\n", indentPrompt)
-	fmt.Printf("%s │ \x1b[93mRevision\x1b[0m : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, saclheader.Revision.Value, saclheader.Revision.String())
-	fmt.Printf("%s │ \x1b[93mSbz1\x1b[0m     : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, saclheader.Sbz1)
-	fmt.Printf("%s │ \x1b[93mAclSize\x1b[0m  : \x1b[96m0x%04x\x1b[0m\n", indentPrompt, saclheader.AclSize)
-	fmt.Printf("%s │ \x1b[93mAceCount\x1b[0m : \x1b[96m0x%04x\x1b[0m (%d)\x1b[0m\n", indentPrompt, saclheader.AceCount, saclheader.AceCount)
-	fmt.Printf("%s │ \x1b[93mSbz2\x1b[0m     : \x1b[96m0x%04x\x1b[0m\n", indentPrompt, saclheader.Sbz2)
-	fmt.Printf("%s └─\n", indentPrompt)
+	saclheader.DescribeWithCallback(indent, fmt.Printf)
 }

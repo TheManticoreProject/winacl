@@ -2,9 +2,9 @@ package identity
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/sid"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // Identity represents a user identity, including its name and associated Security Identifier (SID).
@@ -70,15 +70,24 @@ func (identity *Identity) Marshal() ([]byte, error) {
 // Parameters:
 //   - indent (int): The indentation level for formatting the output. Each level increases
 //     the indentation depth, allowing for a hierarchical display of the Identity's components.
+//
+// DescribeList returns the Identity description as a list of lines at
+// indentation depth 0.
+func (identity *Identity) DescribeList() []string {
+	return []string{
+		"<Identity>",
+		fmt.Sprintf(" │ \x1b[93mSID\x1b[0m  : \x1b[96m%s\x1b[0m", identity.SID.ToString()),
+		fmt.Sprintf(" │ \x1b[93mName\x1b[0m : '\x1b[94m%s\x1b[0m'", identity.Name),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the Identity at the given indentation depth,
+// routing each line to the provided fmt.Printf-like callback.
+func (identity *Identity) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, identity.DescribeList(), printf)
+}
+
 func (identity *Identity) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-
-	fmt.Printf("%s<Identity>\n", indentPrompt)
-
-	fmt.Printf("%s │ \x1b[93mSID\x1b[0m  : \x1b[96m%s\x1b[0m\n", indentPrompt, identity.SID.ToString())
-	//identity.SID.Describe(indent + 1)
-
-	fmt.Printf("%s │ \x1b[93mName\x1b[0m : '\x1b[94m%s\x1b[0m'\n", indentPrompt, identity.Name)
-
-	fmt.Printf("%s └─\n", indentPrompt)
+	identity.DescribeWithCallback(indent, fmt.Printf)
 }

@@ -2,7 +2,6 @@ package ace
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/ace/acetype"
 	"github.com/TheManticoreProject/winacl/ace/applicationdata"
@@ -10,6 +9,7 @@ import (
 	"github.com/TheManticoreProject/winacl/ace/mask"
 	"github.com/TheManticoreProject/winacl/identity"
 	"github.com/TheManticoreProject/winacl/object"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // AccessControlEntry represents an entry in an access control list (ACL).
@@ -867,90 +867,86 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 	return marshalledData, nil
 }
 
-// Describe prints a detailed description of the AccessControlEntry struct,
-// including its attributes formatted with indentation for clarity.
-//
-// Parameters:
-//   - indent (int): The indentation level for formatting the output. Each level increases
-//     the indentation depth, allowing for a hierarchical display of the ACE's components.
-func (ace *AccessControlEntry) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
+// DescribeList returns a detailed description of the AccessControlEntry as a
+// list of lines at indentation depth 0, nesting each component (header, mask,
+// object type, identity, application data) one level deeper.
+func (ace *AccessControlEntry) DescribeList() []string {
+	lines := []string{fmt.Sprintf("<AccessControlEntry #%d>", ace.Index)}
 
-	fmt.Printf("%s<AccessControlEntry #%d>\n", indentPrompt, ace.Index)
-	ace.Header.Describe(indent + 1)
+	lines = append(lines, describe.Nest(ace.Header.DescribeList())...)
 
 	switch ace.Header.Type.Value {
 
 	case acetype.ACE_TYPE_ACCESS_ALLOWED:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_ACCESS_DENIED:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_AUDIT:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_ALARM:
 	case acetype.ACE_TYPE_ACCESS_ALLOWED_COMPOUND:
 	case acetype.ACE_TYPE_ACCESS_ALLOWED_OBJECT:
-		ace.Mask.Describe(indent + 1)
-		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.AccessControlObjectType.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_ACCESS_DENIED_OBJECT:
-		ace.Mask.Describe(indent + 1)
-		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.AccessControlObjectType.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_AUDIT_OBJECT:
-		ace.Mask.Describe(indent + 1)
-		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.AccessControlObjectType.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_ALARM_OBJECT:
 	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK_OBJECT:
-		ace.Mask.Describe(indent + 1)
-		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.AccessControlObjectType.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_ACCESS_DENIED_CALLBACK_OBJECT:
-		ace.Mask.Describe(indent + 1)
-		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.AccessControlObjectType.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK:
 	case acetype.ACE_TYPE_SYSTEM_AUDIT_CALLBACK_OBJECT:
-		ace.Mask.Describe(indent + 1)
-		ace.AccessControlObjectType.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.AccessControlObjectType.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_ALARM_CALLBACK_OBJECT:
 	case acetype.ACE_TYPE_SYSTEM_MANDATORY_LABEL:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
 	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
-		ace.Mask.Describe(indent + 1)
-		ace.Identity.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
+		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 	}
 
 	if ace.ApplicationData.Len() > 0 {
@@ -958,8 +954,26 @@ func (ace *AccessControlEntry) Describe(indent int) {
 		// correct interpretation (resource attribute vs. raw) even when the caller
 		// populated RawBytes directly.
 		ace.ApplicationData.AceType = ace.Header.Type.Value
-		ace.ApplicationData.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.ApplicationData.DescribeList())...)
 	}
 
-	fmt.Printf("%s └─\n", indentPrompt)
+	lines = append(lines, " └─")
+
+	return lines
+}
+
+// DescribeWithCallback renders the AccessControlEntry at the given indentation
+// depth, routing each line to the provided fmt.Printf-like callback.
+func (ace *AccessControlEntry) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, ace.DescribeList(), printf)
+}
+
+// Describe prints a detailed description of the AccessControlEntry struct,
+// including its attributes formatted with indentation for clarity.
+//
+// Parameters:
+//   - indent (int): The indentation level for formatting the output. Each level increases
+//     the indentation depth, allowing for a hierarchical display of the ACE's components.
+func (ace *AccessControlEntry) Describe(indent int) {
+	ace.DescribeWithCallback(indent, fmt.Printf)
 }

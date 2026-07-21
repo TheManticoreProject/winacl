@@ -2,9 +2,9 @@ package acl
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/ace"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // DiscretionaryAccessControlList represents a Discretionary Access Control List (DACL).
@@ -95,22 +95,29 @@ func (dacl *DiscretionaryAccessControlList) Marshal() ([]byte, error) {
 	return marshalledData, nil
 }
 
-// Describe prints a detailed description of the DiscretionaryAccessControlList struct,
-// including its attributes formatted with indentation for clarity.
-//
-// Parameters:
-//   - indent (int): The indentation level for formatting the output. Each level increases
-//     the indentation depth, allowing for a hierarchical display of the DACL's components.
-func (dacl *DiscretionaryAccessControlList) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
+// DescribeList returns the DiscretionaryAccessControlList description as a list
+// of lines at indentation depth 0, nesting the header and each entry one level
+// deeper.
+func (dacl *DiscretionaryAccessControlList) DescribeList() []string {
+	lines := []string{"<DiscretionaryAccessControlList>"}
 
-	fmt.Printf("%s<DiscretionaryAccessControlList>\n", indentPrompt)
-
-	dacl.Header.Describe(indent + 1)
+	lines = append(lines, describe.Nest(dacl.Header.DescribeList())...)
 
 	for _, ace := range dacl.Entries {
-		ace.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.DescribeList())...)
 	}
 
-	fmt.Printf("%s └─\n", indentPrompt)
+	lines = append(lines, " └─")
+
+	return lines
+}
+
+// DescribeWithCallback renders the DiscretionaryAccessControlList at the given
+// indentation depth, routing each line to the provided fmt.Printf-like callback.
+func (dacl *DiscretionaryAccessControlList) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, dacl.DescribeList(), printf)
+}
+
+func (dacl *DiscretionaryAccessControlList) Describe(indent int) {
+	dacl.DescribeWithCallback(indent, fmt.Printf)
 }

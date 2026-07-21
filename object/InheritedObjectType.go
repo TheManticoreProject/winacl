@@ -2,9 +2,9 @@ package object
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/guid"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // InheritedObjectType represents a type of object that inherits
@@ -60,9 +60,22 @@ func (inheritedObjType *InheritedObjectType) Marshal() ([]byte, error) {
 // Describe prints a formatted representation of the InheritedObjectType instance,
 // including its GUID, to the standard output. The output is indented
 // based on the provided indent level for better readability.
+// DescribeList returns the InheritedObjectType description as a list of lines at
+// indentation depth 0.
+func (inheritedObjType *InheritedObjectType) DescribeList() []string {
+	return []string{
+		"<InheritedObjectType>",
+		fmt.Sprintf(" │ \x1b[93mGUID\x1b[0m : \x1b[96m%s\x1b[0m", inheritedObjType.GUID.ToFormatD()),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the InheritedObjectType at the given indentation
+// depth, routing each line to the provided fmt.Printf-like callback.
+func (inheritedObjType *InheritedObjectType) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, inheritedObjType.DescribeList(), printf)
+}
+
 func (inheritedObjType *InheritedObjectType) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-	fmt.Printf("%s<InheritedObjectType>\n", indentPrompt)
-	fmt.Printf("%s │ \x1b[93mGUID\x1b[0m : \x1b[96m%s\x1b[0m\n", indentPrompt, inheritedObjType.GUID.ToFormatD())
-	fmt.Printf("%s └─\n", indentPrompt)
+	inheritedObjType.DescribeWithCallback(indent, fmt.Printf)
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/TheManticoreProject/winacl/ace/aceflags"
 	"github.com/TheManticoreProject/winacl/ace/acetype"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // AccessControlEntryHeader represents the header of an Access Control Entry (ACE)
@@ -117,11 +118,25 @@ func (aceheader *AccessControlEntryHeader) Marshal() ([]byte, error) {
 // Parameters:
 //   - indent: An integer that specifies the level of indentation for the output,
 //     allowing for better visualization of nested structures.
+//
+// DescribeList returns the AccessControlEntryHeader description as a list of
+// lines at indentation depth 0.
+func (aceheader *AccessControlEntryHeader) DescribeList() []string {
+	return []string{
+		"<AccessControlEntryHeader>",
+		fmt.Sprintf(" │ \x1b[93mType\x1b[0m  : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)", aceheader.Type.Value, aceheader.Type.String()),
+		fmt.Sprintf(" │ \x1b[93mFlags\x1b[0m : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)", aceheader.Flags.RawValue, strings.Join(aceheader.Flags.Flags, "|")),
+		fmt.Sprintf(" │ \x1b[93mSize\x1b[0m  : \x1b[96m0x%04x\x1b[0m", aceheader.Size),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the AccessControlEntryHeader at the given
+// indentation depth, routing each line to the provided fmt.Printf-like callback.
+func (aceheader *AccessControlEntryHeader) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, aceheader.DescribeList(), printf)
+}
+
 func (aceheader *AccessControlEntryHeader) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-	fmt.Printf("%s<AccessControlEntryHeader>\n", indentPrompt)
-	fmt.Printf("%s │ \x1b[93mType\x1b[0m  : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aceheader.Type.Value, aceheader.Type.String())
-	fmt.Printf("%s │ \x1b[93mFlags\x1b[0m : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, aceheader.Flags.RawValue, strings.Join(aceheader.Flags.Flags, "|"))
-	fmt.Printf("%s │ \x1b[93mSize\x1b[0m  : \x1b[96m0x%04x\x1b[0m\n", indentPrompt, aceheader.Size)
-	fmt.Printf("%s └─\n", indentPrompt)
+	aceheader.DescribeWithCallback(indent, fmt.Printf)
 }

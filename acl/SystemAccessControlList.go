@@ -2,9 +2,9 @@ package acl
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/ace"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // SystemAccessControlList represents a System Access Control List (SACL).
@@ -97,22 +97,29 @@ func (sacl *SystemAccessControlList) Marshal() ([]byte, error) {
 	return marshalledData, nil
 }
 
-// Describe prints a detailed description of the SystemAccessControlList struct,
-// including its attributes formatted with indentation for clarity.
-//
-// Parameters:
-//   - indent (int): The indentation level for formatting the output. Each level increases
-//     the indentation depth, allowing for a hierarchical display of the SACL's components.
-func (sacl *SystemAccessControlList) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
+// DescribeList returns the SystemAccessControlList description as a list of
+// lines at indentation depth 0, nesting the header and each entry one level
+// deeper.
+func (sacl *SystemAccessControlList) DescribeList() []string {
+	lines := []string{"<SystemAccessControlList>"}
 
-	fmt.Printf("%s<SystemAccessControlList>\n", indentPrompt)
-
-	sacl.Header.Describe(indent + 1)
+	lines = append(lines, describe.Nest(sacl.Header.DescribeList())...)
 
 	for _, ace := range sacl.Entries {
-		ace.Describe(indent + 1)
+		lines = append(lines, describe.Nest(ace.DescribeList())...)
 	}
 
-	fmt.Printf("%s └─\n", indentPrompt)
+	lines = append(lines, " └─")
+
+	return lines
+}
+
+// DescribeWithCallback renders the SystemAccessControlList at the given
+// indentation depth, routing each line to the provided fmt.Printf-like callback.
+func (sacl *SystemAccessControlList) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, sacl.DescribeList(), printf)
+}
+
+func (sacl *SystemAccessControlList) Describe(indent int) {
+	sacl.DescribeWithCallback(indent, fmt.Printf)
 }
