@@ -2,9 +2,9 @@ package object
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/guid"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // ObjectType represents a type of object with an associated GUID.
@@ -55,9 +55,22 @@ func (objType *ObjectType) Marshal() ([]byte, error) {
 // Describe prints a formatted representation of the ObjectType instance,
 // including its GUID, to the standard output. The output is indented
 // based on the provided indent level for better readability.
+// DescribeList returns the ObjectType description as a list of lines at
+// indentation depth 0.
+func (objType *ObjectType) DescribeList() []string {
+	return []string{
+		"<ObjectType>",
+		fmt.Sprintf(" │ \x1b[93mGUID\x1b[0m : \x1b[96m%s\x1b[0m", objType.GUID.ToFormatD()),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the ObjectType at the given indentation depth,
+// routing each line to the provided fmt.Printf-like callback.
+func (objType *ObjectType) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, objType.DescribeList(), printf)
+}
+
 func (objType *ObjectType) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-	fmt.Printf("%s<ObjectType>\n", indentPrompt)
-	fmt.Printf("%s │ \x1b[93mGUID\x1b[0m : \x1b[96m%s\x1b[0m\n", indentPrompt, objType.GUID.ToFormatD())
-	fmt.Printf("%s └─\n", indentPrompt)
+	objType.DescribeWithCallback(indent, fmt.Printf)
 }

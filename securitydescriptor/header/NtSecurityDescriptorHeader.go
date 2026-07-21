@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/TheManticoreProject/winacl/securitydescriptor/control"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // NtSecurityDescriptorHeader represents the header of a NT Security Descriptor,
@@ -121,15 +122,29 @@ func (ntsdh *NtSecurityDescriptorHeader) Marshal() ([]byte, error) {
 // Parameters:
 //   - indent (int): The indentation level for formatting the output. Each level increases
 //     the indentation depth, allowing for a hierarchical display of the header's components.
+//
+// DescribeList returns the NtSecurityDescriptorHeader description as a list of
+// lines at indentation depth 0.
+func (ntsd *NtSecurityDescriptorHeader) DescribeList() []string {
+	return []string{
+		"<NtSecurityDescriptorHeader>",
+		fmt.Sprintf(" │ \x1b[93mRevision\x1b[0m    : \x1b[96m0x%02x\x1b[0m", ntsd.Revision),
+		fmt.Sprintf(" │ \x1b[93mSbz1\x1b[0m        : \x1b[96m0x%02x\x1b[0m", ntsd.Sbz1),
+		fmt.Sprintf(" │ \x1b[93mControl\x1b[0m     : \x1b[96m0x%04x\x1b[0m (\x1b[94m%s\x1b[0m)", ntsd.Control.RawValue, strings.Join(ntsd.Control.Flags, "|")),
+		fmt.Sprintf(" │ \x1b[93mOffsetOwner\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)", ntsd.OffsetOwner, ntsd.OffsetOwner),
+		fmt.Sprintf(" │ \x1b[93mOffsetGroup\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)", ntsd.OffsetGroup, ntsd.OffsetGroup),
+		fmt.Sprintf(" │ \x1b[93mOffsetSacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)", ntsd.OffsetSacl, ntsd.OffsetSacl),
+		fmt.Sprintf(" │ \x1b[93mOffsetDacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)", ntsd.OffsetDacl, ntsd.OffsetDacl),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the NtSecurityDescriptorHeader at the given
+// indentation depth, routing each line to the provided fmt.Printf-like callback.
+func (ntsd *NtSecurityDescriptorHeader) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, ntsd.DescribeList(), printf)
+}
+
 func (ntsd *NtSecurityDescriptorHeader) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-	fmt.Printf("%s<NtSecurityDescriptorHeader>\n", indentPrompt)
-	fmt.Printf("%s │ \x1b[93mRevision\x1b[0m    : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, ntsd.Revision)
-	fmt.Printf("%s │ \x1b[93mSbz1\x1b[0m        : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, ntsd.Sbz1)
-	fmt.Printf("%s │ \x1b[93mControl\x1b[0m     : \x1b[96m0x%04x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, ntsd.Control.RawValue, strings.Join(ntsd.Control.Flags, "|"))
-	fmt.Printf("%s │ \x1b[93mOffsetOwner\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetOwner, ntsd.OffsetOwner)
-	fmt.Printf("%s │ \x1b[93mOffsetGroup\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetGroup, ntsd.OffsetGroup)
-	fmt.Printf("%s │ \x1b[93mOffsetSacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetSacl, ntsd.OffsetSacl)
-	fmt.Printf("%s │ \x1b[93mOffsetDacl\x1b[0m  : \x1b[96m0x%08x\x1b[0m (\x1b[94m%d\x1b[0m)\n", indentPrompt, ntsd.OffsetDacl, ntsd.OffsetDacl)
-	fmt.Printf("%s └─\n", indentPrompt)
+	ntsd.DescribeWithCallback(indent, fmt.Printf)
 }

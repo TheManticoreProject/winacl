@@ -3,9 +3,9 @@ package acl
 import (
 	"encoding/binary"
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/acl/revision"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // DiscretionaryAccessControlListHeader represents the header of a Discretionary Access Control List (DACL).
@@ -96,19 +96,27 @@ func (daclheader *DiscretionaryAccessControlListHeader) Marshal() ([]byte, error
 	return marshalledData, nil
 }
 
-// Describe prints a detailed description of the DiscretionaryAccessControlListHeader struct,
-// including its attributes formatted with indentation for clarity.
-//
-// Parameters:
-//   - indent (int): The indentation level for formatting the output. Each level increases
-//     the indentation depth, allowing for a hierarchical display of the DACL's components.
+// DescribeList returns the DiscretionaryAccessControlListHeader description as a
+// list of lines at indentation depth 0.
+func (daclheader *DiscretionaryAccessControlListHeader) DescribeList() []string {
+	return []string{
+		"<DiscretionaryAccessControlListHeader>",
+		fmt.Sprintf(" │ \x1b[93mRevision\x1b[0m : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)", daclheader.Revision.Value, daclheader.Revision.String()),
+		fmt.Sprintf(" │ \x1b[93mSbz1\x1b[0m     : \x1b[96m0x%02x\x1b[0m", daclheader.Sbz1),
+		fmt.Sprintf(" │ \x1b[93mAclSize\x1b[0m  : \x1b[96m0x%04x\x1b[0m", daclheader.AclSize),
+		fmt.Sprintf(" │ \x1b[93mAceCount\x1b[0m : \x1b[96m0x%04x (%d)\x1b[0m", daclheader.AceCount, daclheader.AceCount),
+		fmt.Sprintf(" │ \x1b[93mSbz2\x1b[0m     : \x1b[96m0x%04x\x1b[0m", daclheader.Sbz2),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the DiscretionaryAccessControlListHeader at the
+// given indentation depth, routing each line to the provided fmt.Printf-like
+// callback.
+func (daclheader *DiscretionaryAccessControlListHeader) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, daclheader.DescribeList(), printf)
+}
+
 func (daclheader *DiscretionaryAccessControlListHeader) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-	fmt.Printf("%s<DiscretionaryAccessControlListHeader>\n", indentPrompt)
-	fmt.Printf("%s │ \x1b[93mRevision\x1b[0m : \x1b[96m0x%02x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, daclheader.Revision.Value, daclheader.Revision.String())
-	fmt.Printf("%s │ \x1b[93mSbz1\x1b[0m     : \x1b[96m0x%02x\x1b[0m\n", indentPrompt, daclheader.Sbz1)
-	fmt.Printf("%s │ \x1b[93mAclSize\x1b[0m  : \x1b[96m0x%04x\x1b[0m\n", indentPrompt, daclheader.AclSize)
-	fmt.Printf("%s │ \x1b[93mAceCount\x1b[0m : \x1b[96m0x%04x (%d)\x1b[0m\n", indentPrompt, daclheader.AceCount, daclheader.AceCount)
-	fmt.Printf("%s │ \x1b[93mSbz2\x1b[0m     : \x1b[96m0x%04x\x1b[0m\n", indentPrompt, daclheader.Sbz2)
-	fmt.Printf("%s └─\n", indentPrompt)
+	daclheader.DescribeWithCallback(indent, fmt.Printf)
 }

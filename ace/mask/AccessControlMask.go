@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/TheManticoreProject/winacl/rights"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // AccessControlMask represents a mask for access control entries.
@@ -84,11 +85,24 @@ func (acm *AccessControlMask) String() string {
 	return strings.Join(acm.Flags, "|")
 }
 
+// DescribeList returns the AccessControlMask description as a list of lines at
+// indentation depth 0.
+func (acm *AccessControlMask) DescribeList() []string {
+	return []string{
+		"<AccessControlMask>",
+		fmt.Sprintf(" │ \x1b[93mMask\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%s\x1b[0m)", acm.RawValue, acm.String()),
+		" └─",
+	}
+}
+
+// DescribeWithCallback renders the AccessControlMask at the given indentation
+// depth, routing each line to the provided fmt.Printf-like callback.
+func (acm *AccessControlMask) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, acm.DescribeList(), printf)
+}
+
 // Describe outputs the AccessControlMask details in a formatted manner.
 // It displays the raw mask value and the associated flags.
 func (acm *AccessControlMask) Describe(indent int) {
-	indentPrompt := strings.Repeat(" │ ", indent)
-	fmt.Printf("%s<AccessControlMask>\n", indentPrompt)
-	fmt.Printf("%s │ \x1b[93mMask\x1b[0m : \x1b[96m0x%08x\x1b[0m (\x1b[94m%s\x1b[0m)\n", indentPrompt, acm.RawValue, acm.String())
-	fmt.Printf("%s └─\n", indentPrompt)
+	acm.DescribeWithCallback(indent, fmt.Printf)
 }

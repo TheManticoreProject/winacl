@@ -20,11 +20,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"strings"
 
 	"github.com/TheManticoreProject/winacl/ace/acetype"
 	"github.com/TheManticoreProject/winacl/ace/condition"
 	"github.com/TheManticoreProject/winacl/ace/resourceattribute"
+	"github.com/TheManticoreProject/winacl/utils/describe"
 )
 
 // ApplicationData holds the trailing ApplicationData bytes of an ACE together
@@ -119,44 +119,53 @@ func (ad *ApplicationData) Equal(other *ApplicationData) bool {
 	return bytes.Equal(ad.RawBytes, other.RawBytes)
 }
 
-// Describe prints the ApplicationData as a subtree. For a callback ACE carrying
-// a conditional expression it shows the ACE_CONDITION signature ("artx") magic
-// bytes and the decoded expression; for a resource-attribute ACE it shows the
-// decoded CLAIM attribute; otherwise it falls back to the raw bytes. The raw
-// bytes are always shown so nothing is hidden if decoding is partial.
-//
-// Parameters:
-//   - indent (int): The indentation level for formatting the output.
-func (ad *ApplicationData) Describe(indent int) {
-	p := strings.Repeat(" │ ", indent)
+// DescribeList returns the ApplicationData description as a list of lines at
+// indentation depth 0. For a callback ACE carrying a conditional expression it
+// shows the ACE_CONDITION signature ("artx") magic bytes and the decoded
+// expression; for a resource-attribute ACE it shows the decoded CLAIM
+// attribute; otherwise it falls back to the raw bytes. The raw bytes are always
+// shown so nothing is hidden if decoding is partial.
+func (ad *ApplicationData) DescribeList() []string {
 	rawHex := hex.EncodeToString(ad.RawBytes)
 
-	fmt.Printf("%s<ApplicationData>\n", p)
+	lines := []string{"<ApplicationData>"}
 
 	switch {
 	case ad.IsConditional():
 		sig := ad.RawBytes[:4]
-		fmt.Printf("%s │ \x1b[93mType\x1b[0m      : \x1b[94mConditional Expression\x1b[0m\n", p)
-		fmt.Printf("%s │ \x1b[93mSignature\x1b[0m : \x1b[96m0x%s\x1b[0m (\x1b[94m%s\x1b[0m)\n", p, hex.EncodeToString(sig), string(sig))
+		lines = append(lines, " │ \x1b[93mType\x1b[0m      : \x1b[94mConditional Expression\x1b[0m")
+		lines = append(lines, fmt.Sprintf(" │ \x1b[93mSignature\x1b[0m : \x1b[96m0x%s\x1b[0m (\x1b[94m%s\x1b[0m)", hex.EncodeToString(sig), string(sig)))
 		if expr, err := ad.ConditionalExpression(); err == nil {
-			fmt.Printf("%s │ \x1b[93mCondition\x1b[0m : \x1b[96m(%s)\x1b[0m\n", p, expr)
+			lines = append(lines, fmt.Sprintf(" │ \x1b[93mCondition\x1b[0m : \x1b[96m(%s)\x1b[0m", expr))
 		} else {
-			fmt.Printf("%s │ \x1b[93mCondition\x1b[0m : \x1b[91m<unparsed: %s>\x1b[0m\n", p, err)
+			lines = append(lines, fmt.Sprintf(" │ \x1b[93mCondition\x1b[0m : \x1b[91m<unparsed: %s>\x1b[0m", err))
 		}
-		fmt.Printf("%s │ \x1b[93mRawBytes\x1b[0m  : \x1b[96m%s\x1b[0m\n", p, rawHex)
+		lines = append(lines, fmt.Sprintf(" │ \x1b[93mRawBytes\x1b[0m  : \x1b[96m%s\x1b[0m", rawHex))
 
 	case ad.IsResourceAttribute():
-		fmt.Printf("%s │ \x1b[93mType\x1b[0m      : \x1b[94mResource Attribute (CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)\x1b[0m\n", p)
+		lines = append(lines, " │ \x1b[93mType\x1b[0m      : \x1b[94mResource Attribute (CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)\x1b[0m")
 		if attr, err := ad.ResourceAttribute(); err == nil {
-			fmt.Printf("%s │ \x1b[93mAttribute\x1b[0m : \x1b[96m(%s)\x1b[0m\n", p, attr)
+			lines = append(lines, fmt.Sprintf(" │ \x1b[93mAttribute\x1b[0m : \x1b[96m(%s)\x1b[0m", attr))
 		} else {
-			fmt.Printf("%s │ \x1b[93mAttribute\x1b[0m : \x1b[91m<unparsed: %s>\x1b[0m\n", p, err)
+			lines = append(lines, fmt.Sprintf(" │ \x1b[93mAttribute\x1b[0m : \x1b[91m<unparsed: %s>\x1b[0m", err))
 		}
-		fmt.Printf("%s │ \x1b[93mRawBytes\x1b[0m  : \x1b[96m%s\x1b[0m\n", p, rawHex)
+		lines = append(lines, fmt.Sprintf(" │ \x1b[93mRawBytes\x1b[0m  : \x1b[96m%s\x1b[0m", rawHex))
 
 	default:
-		fmt.Printf("%s │ \x1b[93mRawBytes\x1b[0m : \x1b[96m%s\x1b[0m\n", p, rawHex)
+		lines = append(lines, fmt.Sprintf(" │ \x1b[93mRawBytes\x1b[0m : \x1b[96m%s\x1b[0m", rawHex))
 	}
 
-	fmt.Printf("%s └─\n", p)
+	lines = append(lines, " └─")
+
+	return lines
+}
+
+// DescribeWithCallback renders the ApplicationData at the given indentation
+// depth, routing each line to the provided fmt.Printf-like callback.
+func (ad *ApplicationData) DescribeWithCallback(indent int, printf describe.Printf) {
+	describe.WithCallback(indent, ad.DescribeList(), printf)
+}
+
+func (ad *ApplicationData) Describe(indent int) {
+	ad.DescribeWithCallback(indent, fmt.Printf)
 }
