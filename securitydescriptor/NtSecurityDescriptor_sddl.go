@@ -417,7 +417,7 @@ func sddlParseACE(aceStr string) (*ntsd_ace.AccessControlEntry, error) {
 		ace.Identity.Name = parsedSID.LookupName()
 	}
 
-	// Parse the optional 7th field. Callback ACE types (XA/XD/XU/ZA) carry a
+	// Parse the optional 7th field. Callback ACE types (XA/XD/XU/ZA/ZD) carry a
 	// conditional expression compiled into the MS-DTYP 2.4.4.17.1 format;
 	// resource-attribute ACEs (RA) carry attribute-data compiled into a
 	// CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 (MS-DTYP 2.4.10.1). Either way the
