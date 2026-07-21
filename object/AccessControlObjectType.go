@@ -145,5 +145,5 @@ func (aco *AccessControlObjectType) DescribeWithCallback(indent int, printf desc
 }
 
 func (aco *AccessControlObjectType) Describe(indent int) {
-	aco.DescribeWithCallback(indent, fmt.Printf)
+	aco.DescribeWithCallback(indent, describe.Printfln)
 }

@@ -104,5 +104,5 @@ func (acm *AccessControlMask) DescribeWithCallback(indent int, printf describe.P
 // Describe outputs the AccessControlMask details in a formatted manner.
 // It displays the raw mask value and the associated flags.
 func (acm *AccessControlMask) Describe(indent int) {
-	acm.DescribeWithCallback(indent, fmt.Printf)
+	acm.DescribeWithCallback(indent, describe.Printfln)
 }

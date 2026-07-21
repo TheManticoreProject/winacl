@@ -975,5 +975,5 @@ func (ace *AccessControlEntry) DescribeWithCallback(indent int, printf describe.
 //   - indent (int): The indentation level for formatting the output. Each level increases
 //     the indentation depth, allowing for a hierarchical display of the ACE's components.
 func (ace *AccessControlEntry) Describe(indent int) {
-	ace.DescribeWithCallback(indent, fmt.Printf)
+	ace.DescribeWithCallback(indent, describe.Printfln)
 }

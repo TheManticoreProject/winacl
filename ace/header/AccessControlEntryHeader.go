@@ -138,5 +138,5 @@ func (aceheader *AccessControlEntryHeader) DescribeWithCallback(indent int, prin
 }
 
 func (aceheader *AccessControlEntryHeader) Describe(indent int) {
-	aceheader.DescribeWithCallback(indent, fmt.Printf)
+	aceheader.DescribeWithCallback(indent, describe.Printfln)
 }

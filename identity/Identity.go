@@ -89,5 +89,5 @@ func (identity *Identity) DescribeWithCallback(indent int, printf describe.Print
 }
 
 func (identity *Identity) Describe(indent int) {
-	identity.DescribeWithCallback(indent, fmt.Printf)
+	identity.DescribeWithCallback(indent, describe.Printfln)
 }

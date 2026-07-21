@@ -301,5 +301,5 @@ func (ntsd *NtSecurityDescriptor) DescribeWithCallback(indent int, printf descri
 // Parameters:
 //   - indent (int): The indentation level for the output.
 func (ntsd *NtSecurityDescriptor) Describe(indent int) {
-	ntsd.DescribeWithCallback(indent, fmt.Printf)
+	ntsd.DescribeWithCallback(indent, describe.Printfln)
 }

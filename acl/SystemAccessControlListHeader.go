@@ -114,5 +114,5 @@ func (saclheader *SystemAccessControlListHeader) DescribeWithCallback(indent int
 }
 
 func (saclheader *SystemAccessControlListHeader) Describe(indent int) {
-	saclheader.DescribeWithCallback(indent, fmt.Printf)
+	saclheader.DescribeWithCallback(indent, describe.Printfln)
 }
