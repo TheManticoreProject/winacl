@@ -537,5 +537,5 @@ func (sid *SID) DescribeWithCallback(indent int, printf describe.Printf) {
 }
 
 func (sid *SID) Describe(indent int) {
-	sid.DescribeWithCallback(indent, fmt.Printf)
+	sid.DescribeWithCallback(indent, describe.Printfln)
 }

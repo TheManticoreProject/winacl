@@ -77,5 +77,5 @@ func (inheritedObjType *InheritedObjectType) DescribeWithCallback(indent int, pr
 }
 
 func (inheritedObjType *InheritedObjectType) Describe(indent int) {
-	inheritedObjType.DescribeWithCallback(indent, fmt.Printf)
+	inheritedObjType.DescribeWithCallback(indent, describe.Printfln)
 }

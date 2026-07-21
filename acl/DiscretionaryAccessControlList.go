@@ -119,5 +119,5 @@ func (dacl *DiscretionaryAccessControlList) DescribeWithCallback(indent int, pri
 }
 
 func (dacl *DiscretionaryAccessControlList) Describe(indent int) {
-	dacl.DescribeWithCallback(indent, fmt.Printf)
+	dacl.DescribeWithCallback(indent, describe.Printfln)
 }

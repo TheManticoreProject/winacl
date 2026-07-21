@@ -72,5 +72,5 @@ func (objType *ObjectType) DescribeWithCallback(indent int, printf describe.Prin
 }
 
 func (objType *ObjectType) Describe(indent int) {
-	objType.DescribeWithCallback(indent, fmt.Printf)
+	objType.DescribeWithCallback(indent, describe.Printfln)
 }

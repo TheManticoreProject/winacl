@@ -121,5 +121,5 @@ func (sacl *SystemAccessControlList) DescribeWithCallback(indent int, printf des
 }
 
 func (sacl *SystemAccessControlList) Describe(indent int) {
-	sacl.DescribeWithCallback(indent, fmt.Printf)
+	sacl.DescribeWithCallback(indent, describe.Printfln)
 }

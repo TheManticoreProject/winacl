@@ -167,5 +167,5 @@ func (ad *ApplicationData) DescribeWithCallback(indent int, printf describe.Prin
 }
 
 func (ad *ApplicationData) Describe(indent int) {
-	ad.DescribeWithCallback(indent, fmt.Printf)
+	ad.DescribeWithCallback(indent, describe.Printfln)
 }

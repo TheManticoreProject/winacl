@@ -146,5 +146,5 @@ func (ntsd *NtSecurityDescriptorHeader) DescribeWithCallback(indent int, printf 
 }
 
 func (ntsd *NtSecurityDescriptorHeader) Describe(indent int) {
-	ntsd.DescribeWithCallback(indent, fmt.Printf)
+	ntsd.DescribeWithCallback(indent, describe.Printfln)
 }
