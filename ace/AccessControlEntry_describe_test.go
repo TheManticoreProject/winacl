@@ -43,7 +43,7 @@ func TestDescribe_ApplicationData_Conditional(t *testing.T) {
 	a := &ace.AccessControlEntry{}
 	a.Header.Type.Value = acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK
 	a.Identity.SID.FromString("S-1-1-0")
-	a.ApplicationData = appData
+	a.ApplicationData.RawBytes = appData
 
 	out := captureStdout(t, func() { a.Describe(0) })
 
@@ -74,7 +74,7 @@ func TestDescribe_ApplicationData_ResourceAttribute(t *testing.T) {
 	a := &ace.AccessControlEntry{}
 	a.Header.Type.Value = acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE
 	a.Identity.SID.FromString("S-1-1-0")
-	a.ApplicationData = appData
+	a.ApplicationData.RawBytes = appData
 
 	out := captureStdout(t, func() { a.Describe(0) })
 
@@ -98,7 +98,7 @@ func TestDescribe_ApplicationData_Raw(t *testing.T) {
 	a := &ace.AccessControlEntry{}
 	a.Header.Type.Value = acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID
 	a.Identity.SID.FromString("S-1-1-0")
-	a.ApplicationData = []byte{0xde, 0xad, 0xbe, 0xef}
+	a.ApplicationData.RawBytes = []byte{0xde, 0xad, 0xbe, 0xef}
 
 	out := captureStdout(t, func() { a.Describe(0) })
 

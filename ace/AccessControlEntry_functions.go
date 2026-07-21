@@ -1,7 +1,6 @@
 package ace
 
 import (
-	"bytes"
 	"slices"
 
 	"github.com/TheManticoreProject/winacl/ace/aceflags"
@@ -61,9 +60,9 @@ func (ace *AccessControlEntry) Equal(other *AccessControlEntry) bool {
 	}
 
 	// Compare ApplicationData (conditional expression / attribute data carried by
-	// callback, resource-attribute and scoped-policy ACE types). bytes.Equal
-	// treats nil and empty slices as equal, which is the desired behavior here.
-	if !bytes.Equal(ace.ApplicationData, other.ApplicationData) {
+	// callback, resource-attribute and scoped-policy ACE types). Equal treats nil
+	// and empty payloads as equal, which is the desired behavior here.
+	if !ace.ApplicationData.Equal(&other.ApplicationData) {
 		return false
 	}
 

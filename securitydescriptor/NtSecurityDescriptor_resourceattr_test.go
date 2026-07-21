@@ -25,12 +25,12 @@ func TestResourceAttributeACE_SDDLRoundTrip(t *testing.T) {
 	if ace.Header.Type.Value != acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE {
 		t.Fatalf("ACE type = 0x%02x, want SYSTEM_RESOURCE_ATTRIBUTE (0x12)", ace.Header.Type.Value)
 	}
-	if len(ace.ApplicationData) == 0 {
+	if ace.ApplicationData.Len() == 0 {
 		t.Fatal("resource attribute ApplicationData is empty")
 	}
 
 	// The attribute data must decode to the expected fields.
-	ra, err := resourceattribute.Decode(ace.ApplicationData)
+	ra, err := resourceattribute.Decode(ace.ApplicationData.RawBytes)
 	if err != nil {
 		t.Fatalf("Decode error = %v", err)
 	}
@@ -53,9 +53,9 @@ func TestResourceAttributeACE_SDDLRoundTrip(t *testing.T) {
 	if _, err := ntsd2.FromSDDLString(out); err != nil {
 		t.Fatalf("re-FromSDDLString(%q) error = %v", out, err)
 	}
-	if string(ntsd2.SACL.Entries[0].ApplicationData) != string(ace.ApplicationData) {
+	if string(ntsd2.SACL.Entries[0].ApplicationData.RawBytes) != string(ace.ApplicationData.RawBytes) {
 		t.Fatalf("attribute data not stable across SDDL round-trip:\n  first:  %x\n  second: %x",
-			ace.ApplicationData, ntsd2.SACL.Entries[0].ApplicationData)
+			ace.ApplicationData.RawBytes, ntsd2.SACL.Entries[0].ApplicationData.RawBytes)
 	}
 
 	// Full binary round-trip.
@@ -67,7 +67,7 @@ func TestResourceAttributeACE_SDDLRoundTrip(t *testing.T) {
 	if _, err := parsed.Unmarshal(bin); err != nil {
 		t.Fatalf("Unmarshal error = %v", err)
 	}
-	if string(parsed.SACL.Entries[0].ApplicationData) != string(ace.ApplicationData) {
+	if string(parsed.SACL.Entries[0].ApplicationData.RawBytes) != string(ace.ApplicationData.RawBytes) {
 		t.Fatalf("attribute data not preserved across binary round-trip")
 	}
 }

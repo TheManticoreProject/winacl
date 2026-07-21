@@ -432,13 +432,15 @@ func sddlParseACE(aceStr string) (*ntsd_ace.AccessControlEntry, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse conditional expression '%s': %w", trailer, err)
 				}
-				ace.ApplicationData = appData
+				ace.ApplicationData.AceType = ace.Header.Type.Value
+				ace.ApplicationData.Unmarshal(appData)
 			case ace.Header.Type.Value == acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:
 				appData, err := resourceattribute.Marshal(trailer)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse resource attribute '%s': %w", trailer, err)
 				}
-				ace.ApplicationData = appData
+				ace.ApplicationData.AceType = ace.Header.Type.Value
+				ace.ApplicationData.Unmarshal(appData)
 			default:
 				return nil, fmt.Errorf("trailing data present on ACE type '%s' that supports no 7th field", aceTypeStr)
 			}
@@ -555,14 +557,14 @@ func sddlACEToString(ace *ntsd_ace.AccessControlEntry) (string, error) {
 	// SDDL text wrapped in parentheses so it survives the round-trip instead of
 	// being dropped.
 	switch {
-	case condition.IsConditional(ace.ApplicationData):
-		exprText, err := condition.Unmarshal(ace.ApplicationData)
+	case ace.ApplicationData.IsConditional():
+		exprText, err := ace.ApplicationData.ConditionalExpression()
 		if err != nil {
 			return "", fmt.Errorf("failed to serialize conditional expression: %w", err)
 		}
 		fields = append(fields, "("+exprText+")")
-	case ace.Header.Type.Value == acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE && len(ace.ApplicationData) > 0:
-		attrText, err := resourceattribute.Unmarshal(ace.ApplicationData)
+	case ace.Header.Type.Value == acetype.ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE && ace.ApplicationData.Len() > 0:
+		attrText, err := ace.ApplicationData.ResourceAttribute()
 		if err != nil {
 			return "", fmt.Errorf("failed to serialize resource attribute: %w", err)
 		}

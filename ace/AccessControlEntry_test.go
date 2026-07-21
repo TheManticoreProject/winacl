@@ -161,9 +161,9 @@ func TestAccessControlEntry_Involution_ApplicationData(t *testing.T) {
 			}
 
 			expectedAppData, _ := hex.DecodeString(appData)
-			if !bytes.Equal(ace.ApplicationData, expectedAppData) {
+			if !bytes.Equal(ace.ApplicationData.RawBytes, expectedAppData) {
 				t.Fatalf("ApplicationData mismatch: expected %s, got %s",
-					appData, hex.EncodeToString(ace.ApplicationData))
+					appData, hex.EncodeToString(ace.ApplicationData.RawBytes))
 			}
 
 			serializedBytes, err := ace.Marshal()

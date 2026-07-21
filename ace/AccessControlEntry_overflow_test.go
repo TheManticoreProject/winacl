@@ -15,7 +15,7 @@ func TestACE_Marshal_OversizedApplicationData(t *testing.T) {
 	a.Header.Type.Value = acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK
 	a.Mask.SetRights([]uint32{0x00000001})
 	a.Identity.SID.FromString("S-1-1-0")
-	a.ApplicationData = make([]byte, 0x10000) // 65536 bytes: body + header > 65535
+	a.ApplicationData.RawBytes = make([]byte, 0x10000) // 65536 bytes: body + header > 65535
 
 	if _, err := a.Marshal(); err == nil {
 		t.Error("Marshal() = nil error, want error for ACE exceeding the uint16 Header.Size maximum")

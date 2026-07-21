@@ -28,8 +28,8 @@ func TestConditionalACE_SDDLRoundTrip(t *testing.T) {
 	if ace.Header.Type.Value != acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK {
 		t.Fatalf("ACE type = 0x%02x, want ACCESS_ALLOWED_CALLBACK (0x09)", ace.Header.Type.Value)
 	}
-	if !condition.IsConditional(ace.ApplicationData) {
-		t.Fatalf("ACE ApplicationData is not a conditional expression: %x", ace.ApplicationData)
+	if !condition.IsConditional(ace.ApplicationData.RawBytes) {
+		t.Fatalf("ACE ApplicationData is not a conditional expression: %x", ace.ApplicationData.RawBytes)
 	}
 
 	// The conditional expression must be preserved in the SDDL round-trip.
@@ -48,9 +48,9 @@ func TestConditionalACE_SDDLRoundTrip(t *testing.T) {
 	if _, err := ntsd2.FromSDDLString(out); err != nil {
 		t.Fatalf("re-FromSDDLString(%q) error = %v", out, err)
 	}
-	got := ntsd2.DACL.Entries[0].ApplicationData
-	if string(got) != string(ace.ApplicationData) {
-		t.Fatalf("conditional expression not stable across SDDL round-trip:\n  first:  %x\n  second: %x", ace.ApplicationData, got)
+	got := ntsd2.DACL.Entries[0].ApplicationData.RawBytes
+	if string(got) != string(ace.ApplicationData.RawBytes) {
+		t.Fatalf("conditional expression not stable across SDDL round-trip:\n  first:  %x\n  second: %x", ace.ApplicationData.RawBytes, got)
 	}
 
 	// Full binary round-trip: Marshal -> Unmarshal must preserve the condition.
@@ -65,9 +65,9 @@ func TestConditionalACE_SDDLRoundTrip(t *testing.T) {
 	if parsed.DACL == nil || len(parsed.DACL.Entries) != 1 {
 		t.Fatalf("binary round-trip lost the ACE")
 	}
-	if string(parsed.DACL.Entries[0].ApplicationData) != string(ace.ApplicationData) {
+	if string(parsed.DACL.Entries[0].ApplicationData.RawBytes) != string(ace.ApplicationData.RawBytes) {
 		t.Fatalf("conditional expression not preserved across binary round-trip:\n  before: %x\n  after:  %x",
-			ace.ApplicationData, parsed.DACL.Entries[0].ApplicationData)
+			ace.ApplicationData.RawBytes, parsed.DACL.Entries[0].ApplicationData.RawBytes)
 	}
 }
 
