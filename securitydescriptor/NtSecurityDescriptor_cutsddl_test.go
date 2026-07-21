@@ -27,7 +27,7 @@ func TestCutSDDL_ColonInLiteral(t *testing.T) {
 			if ntsd.DACL == nil || len(ntsd.DACL.Entries) != 1 {
 				t.Fatalf("expected one DACL entry, got %+v", ntsd.DACL)
 			}
-			if len(ntsd.DACL.Entries[0].ApplicationData) == 0 {
+			if ntsd.DACL.Entries[0].ApplicationData.Len() == 0 {
 				t.Fatal("ACE ApplicationData is empty; the 7th field was lost")
 			}
 		})

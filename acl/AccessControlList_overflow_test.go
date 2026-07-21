@@ -17,7 +17,7 @@ func largeCallbackACE(appDataLen int) ace.AccessControlEntry {
 	e.Header.Type.Value = acetype.ACE_TYPE_ACCESS_ALLOWED_CALLBACK
 	e.Mask.SetRights([]uint32{0x00000001})
 	e.Identity.SID.FromString("S-1-1-0")
-	e.ApplicationData = make([]byte, appDataLen)
+	e.ApplicationData.RawBytes = make([]byte, appDataLen)
 	return e
 }
 
