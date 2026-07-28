@@ -122,3 +122,99 @@ func TestIsConditional(t *testing.T) {
 		t.Error("short data reported as conditional")
 	}
 }
+
+// TestKeywordOperatorsAreCaseInsensitive checks that SDDL keyword operators parse
+// regardless of case, and in particular that both capitalisations in circulation
+// for the four "any" operators are accepted: MS-DTYP 2.4.4.17.6 spells them
+// Member_of_Any, while the operator-name tables in Windows' own sechost.dll and
+// advapi32.dll spell them Member_of_any.
+//
+// Each variant must encode to exactly the same bytes as the canonical spelling.
+func TestKeywordOperatorsAreCaseInsensitive(t *testing.T) {
+	cases := []struct {
+		canonical string
+		variants  []string
+	}{
+		// Unary membership operators.
+		{`(Member_of {SID(BA)})`, []string{
+			`(member_of {SID(BA)})`, `(MEMBER_OF {SID(BA)})`, `(MeMbEr_Of {SID(BA)})`}},
+		{`(Device_Member_of {SID(BA)})`, []string{
+			`(device_member_of {SID(BA)})`, `(DEVICE_MEMBER_OF {SID(BA)})`}},
+		{`(Not_Member_of {SID(BA)})`, []string{`(not_member_of {SID(BA)})`}},
+		{`(Not_Device_Member_of {SID(BA)})`, []string{`(NOT_DEVICE_MEMBER_OF {SID(BA)})`}},
+
+		// The four operators Windows spells with a lowercase "any".
+		{`(Member_of_Any {SID(BA)})`, []string{
+			`(Member_of_any {SID(BA)})`, `(member_of_any {SID(BA)})`}},
+		{`(Device_Member_of_Any {SID(BA)})`, []string{
+			`(Device_Member_of_any {SID(BA)})`}},
+		{`(Not_Member_of_Any {SID(BA)})`, []string{
+			`(Not_Member_of_any {SID(BA)})`}},
+		{`(Not_Device_Member_of_Any {SID(BA)})`, []string{
+			`(Not_Device_Member_of_any {SID(BA)})`}},
+
+		// Unary existence operators.
+		{`(Exists @User.foo)`, []string{`(exists @User.foo)`, `(EXISTS @User.foo)`}},
+		{`(Not_Exists @User.foo)`, []string{`(not_exists @User.foo)`, `(NOT_EXISTS @User.foo)`}},
+
+		// Binary keyword operators, which are matched on the infix path.
+		{`(@User.a Contains 1)`, []string{`(@User.a contains 1)`, `(@User.a CONTAINS 1)`}},
+		{`(@User.a Not_Contains 1)`, []string{`(@User.a not_contains 1)`}},
+		{`(@User.a Any_of {1,2})`, []string{`(@User.a any_of {1,2})`, `(@User.a ANY_OF {1,2})`}},
+		{`(@User.a Not_Any_of {1,2})`, []string{`(@User.a not_any_of {1,2})`}},
+	}
+
+	for _, c := range cases {
+		want, err := condition.Marshal(c.canonical)
+		if err != nil {
+			t.Fatalf("Marshal(%q) error = %v", c.canonical, err)
+		}
+		for _, variant := range c.variants {
+			t.Run(variant, func(t *testing.T) {
+				got, err := condition.Marshal(variant)
+				if err != nil {
+					t.Fatalf("Marshal(%q) error = %v", variant, err)
+				}
+				if hex.EncodeToString(got) != hex.EncodeToString(want) {
+					t.Fatalf("Marshal(%q) = %s, want %s (same as %q)",
+						variant, hex.EncodeToString(got), hex.EncodeToString(want), c.canonical)
+				}
+			})
+		}
+	}
+}
+
+// TestSerializeUsesSpecCapitalization pins the serialization direction: whatever
+// case was parsed, the text form emitted uses the MS-DTYP capitalisation.
+func TestSerializeUsesSpecCapitalization(t *testing.T) {
+	raw, err := condition.Marshal(`(Member_of_any {SID(BA)})`)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	got, err := condition.Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	if !strings.Contains(got, "Member_of_Any") {
+		t.Fatalf("Unmarshal() = %q, want it to contain %q", got, "Member_of_Any")
+	}
+}
+
+// TestUnaryKeywordOperatorsRejectedInInfixPosition guards the infix path against
+// admitting the unary operators: only Contains/Not_Contains/Any_of/Not_Any_of may
+// appear between a left- and right-hand side.
+func TestUnaryKeywordOperatorsRejectedInInfixPosition(t *testing.T) {
+	bad := []string{
+		`(@User.a Member_of {SID(BA)})`,
+		`(@User.a member_of {SID(BA)})`,
+		`(@User.a Exists @User.b)`,
+		`(@User.a exists @User.b)`,
+	}
+	for _, expr := range bad {
+		t.Run(expr, func(t *testing.T) {
+			if _, err := condition.Marshal(expr); err == nil {
+				t.Fatalf("Marshal(%q) expected an error, got nil", expr)
+			}
+		})
+	}
+}
