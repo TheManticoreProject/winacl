@@ -23,7 +23,8 @@ const (
 	ACE_TYPE_SYSTEM_MANDATORY_LABEL         uint8 = 0x11 // Mandatory label ACE that uses the SYSTEM_MANDATORY_LABEL_ACE (section 2.4.4.13) structure.
 	ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE      uint8 = 0x12 // Resource attribute ACE that uses the SYSTEM_RESOURCE_ATTRIBUTE_ACE (section 2.4.4.15).
 	ACE_TYPE_SYSTEM_SCOPED_POLICY_ID        uint8 = 0x13 // A central policy ID ACE that uses the SYSTEM_SCOPED_POLICY_ID_ACE (section 2.4.4.16).
-
+	ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL     uint8 = 0x14 // Process trust label ACE that uses the SYSTEM_PROCESS_TRUST_LABEL_ACE structure. Not listed in MS-DTYP 2.4.4.1; defined by winnt.h as SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE.
+	ACE_TYPE_SYSTEM_ACCESS_FILTER           uint8 = 0x15 // Access filter ACE that uses the SYSTEM_ACCESS_FILTER_ACE structure. Not listed in MS-DTYP 2.4.4.1; defined by winnt.h as SYSTEM_ACCESS_FILTER_ACE_TYPE.
 )
 
 // AccessControlEntryType represents the type of an Access Control Entry (ACE)
@@ -66,6 +67,8 @@ var AccessControlEntryTypeValueToName = map[uint8]string{
 	ACE_TYPE_SYSTEM_MANDATORY_LABEL:         "SYSTEM_MANDATORY_LABEL",
 	ACE_TYPE_SYSTEM_RESOURCE_ATTRIBUTE:      "SYSTEM_RESOURCE_ATTRIBUTE",
 	ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:        "SYSTEM_SCOPED_POLICY_ID",
+	ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL:     "SYSTEM_PROCESS_TRUST_LABEL",
+	ACE_TYPE_SYSTEM_ACCESS_FILTER:           "SYSTEM_ACCESS_FILTER",
 }
 
 // Unmarshal deserializes the AccessControlEntryType struct from a byte slice.
