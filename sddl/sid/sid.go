@@ -5,21 +5,28 @@ package sid
 
 var SDDLToSID = map[string]string{
 	// Well-known SIDs
-	"WD": "S-1-1-0",  // Everyone
-	"CO": "S-1-3-0",  // Creator Owner
-	"CG": "S-1-3-1",  // Creator Group
-	"OW": "S-1-3-4",  // Owner Rights
-	"NU": "S-1-5-2",  // Network
-	"IU": "S-1-5-4",  // Interactive
-	"SU": "S-1-5-6",  // Service
-	"AN": "S-1-5-7",  // Anonymous
-	"ED": "S-1-5-9",  // Enterprise Domain Controllers
-	"PS": "S-1-5-10", // Principal Self
-	"AU": "S-1-5-11", // Authenticated Users
-	"RC": "S-1-5-12", // Restricted Code
-	"SY": "S-1-5-18", // Local System
-	"LS": "S-1-5-19", // Local Service
-	"NS": "S-1-5-20", // Network Service
+	"WD": "S-1-1-0",            // Everyone
+	"CO": "S-1-3-0",            // Creator Owner
+	"CG": "S-1-3-1",            // Creator Group
+	"OW": "S-1-3-4",            // Owner Rights
+	"NU": "S-1-5-2",            // Network
+	"IU": "S-1-5-4",            // Interactive
+	"SU": "S-1-5-6",            // Service
+	"AN": "S-1-5-7",            // Anonymous
+	"ED": "S-1-5-9",            // Enterprise Domain Controllers
+	"PS": "S-1-5-10",           // Principal Self
+	"AU": "S-1-5-11",           // Authenticated Users
+	"RC": "S-1-5-12",           // Restricted Code
+	"SY": "S-1-5-18",           // Local System
+	"LS": "S-1-5-19",           // Local Service
+	"NS": "S-1-5-20",           // Network Service
+	"WR": "S-1-5-33",           // Write Restricted Code
+	"UD": "S-1-5-84-0-0-0-0-0", // User Mode Drivers
+
+	// Application-package and asserted-identity authorities
+	"AC": "S-1-15-2-1", // All Application Packages
+	"AS": "S-1-18-1",   // Authentication Authority Asserted Identity
+	"SS": "S-1-18-2",   // Service Asserted Identity
 
 	// BUILTIN groups
 	"BA": "S-1-5-32-544", // BUILTIN\Administrators
@@ -46,6 +53,8 @@ var SDDLToSID = map[string]string{
 	"HA": "S-1-5-32-578", // BUILTIN\Hyper-V Administrators
 	"AA": "S-1-5-32-579", // BUILTIN\Access Control Assistance Operators
 	"RM": "S-1-5-32-580", // BUILTIN\Remote Management Users
+	"HO": "S-1-5-32-584", // BUILTIN\User Mode Hardware Operators
+	"SH": "S-1-5-32-585", // BUILTIN\OpenSSH Users
 
 	// Domain-relative SIDs (using placeholder domain 0-0-0)
 	"LA": "S-1-5-21-0-0-0-500", // Domain Administrator Account
@@ -62,6 +71,9 @@ var SDDLToSID = map[string]string{
 	"RO": "S-1-5-21-0-0-0-498", // Enterprise Read-Only Domain Controllers (SDDL_ENTERPRISE_RO_DCs)
 	"CN": "S-1-5-21-0-0-0-522", // Cloneable Domain Controllers
 	"RS": "S-1-5-21-0-0-0-553", // RAS Servers Group
+	"AP": "S-1-5-21-0-0-0-525", // Protected Users
+	"KA": "S-1-5-21-0-0-0-526", // Key Admins
+	"EK": "S-1-5-21-0-0-0-527", // Enterprise Key Admins (forest root domain)
 
 	// Mandatory integrity levels
 	"LW": "S-1-16-4096",  // Low Integrity Level
