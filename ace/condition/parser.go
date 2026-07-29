@@ -425,6 +425,8 @@ func (p *parser) parseAttribute() (Node, error) {
 		return &Attribute{Token: tokenDeviceAttr, Name: name[len("@device."):]}, nil
 	case strings.HasPrefix(lower, "@resource."):
 		return &Attribute{Token: tokenResourceAttr, Name: name[len("@resource."):]}, nil
+	case strings.HasPrefix(lower, "@token."):
+		return &Attribute{Token: tokenTokenAttr, Name: name[len("@token."):]}, nil
 	case strings.HasPrefix(name, "@"):
 		return nil, fmt.Errorf("unknown attribute prefix in %q", name)
 	default:

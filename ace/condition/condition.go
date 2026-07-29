@@ -46,6 +46,13 @@ const (
 	tokenUserAttr     byte = 0xf9
 	tokenResourceAttr byte = 0xfa
 	tokenDeviceAttr   byte = 0xfb
+	// tokenTokenAttr is a fifth attribute type that Windows implements but
+	// MS-DTYP 2.4.4.17.8 does not document, carrying the SDDL prefix "@TOKEN.".
+	// Its encoding is identical to the other attribute tokens. The kernel
+	// evaluator treats it as its own attribute source, read from the access
+	// token rather than from the user-claims collection that 0xf9 uses, so it is
+	// not a synonym for tokenUserAttr.
+	tokenTokenAttr byte = 0xfc
 
 	// Binary relational operators.
 	tokenEqual          byte = 0x80
@@ -194,7 +201,7 @@ type Node interface {
 
 // Attribute is an attribute-name operand (local or @User./@Resource./@Device.).
 type Attribute struct {
-	Token byte // one of tokenLocalAttr/tokenUserAttr/tokenResourceAttr/tokenDeviceAttr
+	Token byte // one of tokenLocalAttr/tokenUserAttr/tokenResourceAttr/tokenDeviceAttr/tokenTokenAttr
 	Name  string
 }
 
