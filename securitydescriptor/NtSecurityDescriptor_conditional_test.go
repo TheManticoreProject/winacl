@@ -153,3 +153,76 @@ func TestConditionalACE_RejectedOnNonCallback(t *testing.T) {
 		t.Fatal("expected an error for a conditional expression on a non-callback ACE type, got nil")
 	}
 }
+
+// TestACEType_TL_FL_RoundTrip is a regression test for the SDDL ACE types TL
+// (SYSTEM_PROCESS_TRUST_LABEL, 0x14) and FL (SYSTEM_ACCESS_FILTER, 0x15). Their
+// SDDL constants were declared but their SDDLToACETypeMap entries were commented
+// out because the ACE type constants did not exist, so both were rejected with
+// "unknown ACE type".
+//
+// Both carry an ACCESS_MASK followed by a SID, the same wire shape as
+// SYSTEM_MANDATORY_LABEL and SYSTEM_SCOPED_POLICY_ID.
+func TestACEType_TL_FL_RoundTrip(t *testing.T) {
+	cases := []struct {
+		name string
+		sddl string
+		want uint8
+	}{
+		{"TL", "S:(TL;;;;;WD)", acetype.ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL},
+		{"FL", "S:(FL;;;;;WD)", acetype.ACE_TYPE_SYSTEM_ACCESS_FILTER},
+		{"TL with mask", "S:(TL;;CCDC;;;WD)", acetype.ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			sd := &NtSecurityDescriptor{}
+			if _, err := sd.FromSDDLString(c.sddl); err != nil {
+				t.Fatalf("FromSDDLString(%q) error = %v", c.sddl, err)
+			}
+			if sd.SACL == nil || len(sd.SACL.Entries) != 1 {
+				t.Fatalf("expected exactly one SACL entry")
+			}
+			if got := sd.SACL.Entries[0].Header.Type.Value; got != c.want {
+				t.Fatalf("ACE type = 0x%02x, want 0x%02x", got, c.want)
+			}
+
+			// Binary round-trip: the Marshal/Unmarshal switches must handle the
+			// type too, not just the SDDL mapping.
+			raw, err := sd.Marshal()
+			if err != nil {
+				t.Fatalf("Marshal() error = %v", err)
+			}
+			back := &NtSecurityDescriptor{}
+			if _, err := back.Unmarshal(raw); err != nil {
+				t.Fatalf("Unmarshal() error = %v", err)
+			}
+			got, err := back.ToSDDLString()
+			if err != nil {
+				t.Fatalf("ToSDDLString() error = %v", err)
+			}
+			if got != c.sddl {
+				t.Fatalf("round-trip = %q, want %q", got, c.sddl)
+			}
+		})
+	}
+}
+
+// TestACEType_TL_FL_Names pins the constant values and their human-readable names.
+func TestACEType_TL_FL_Names(t *testing.T) {
+	if acetype.ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL != 0x14 {
+		t.Errorf("ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL = 0x%02x, want 0x14",
+			acetype.ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL)
+	}
+	if acetype.ACE_TYPE_SYSTEM_ACCESS_FILTER != 0x15 {
+		t.Errorf("ACE_TYPE_SYSTEM_ACCESS_FILTER = 0x%02x, want 0x15",
+			acetype.ACE_TYPE_SYSTEM_ACCESS_FILTER)
+	}
+	for value, want := range map[uint8]string{
+		0x14: "SYSTEM_PROCESS_TRUST_LABEL",
+		0x15: "SYSTEM_ACCESS_FILTER",
+	} {
+		at := acetype.AccessControlEntryType{Value: value}
+		if got := at.String(); got == "" {
+			t.Errorf("AccessControlEntryType{0x%02x}.String() is empty, want it to name %s", value, want)
+		}
+	}
+}

@@ -528,7 +528,9 @@ func (ace *AccessControlEntry) Unmarshal(marshalledData []byte) (int, error) {
 		// data is determined by the AceSize field of the ACE_HEADER.
 		// TODO: Parse ApplicationData if necessary
 
-	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID,
+		acetype.ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL,
+		acetype.ACE_TYPE_SYSTEM_ACCESS_FILTER:
 		// Parsing ACE of type SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
 		// Source: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/aa0c0f62-4b4c-44f0-9718-c266a6accd9f
 
@@ -814,7 +816,9 @@ func (ace *AccessControlEntry) Marshal() ([]byte, error) {
 		}
 		marshalledData = append(marshalledData, bytesStream...)
 
-	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID,
+		acetype.ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL,
+		acetype.ACE_TYPE_SYSTEM_ACCESS_FILTER:
 		bytesStream, err = ace.Mask.Marshal()
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal Mask: %w", err)
@@ -944,7 +948,9 @@ func (ace *AccessControlEntry) DescribeList() []string {
 		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
 		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 
-	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID:
+	case acetype.ACE_TYPE_SYSTEM_SCOPED_POLICY_ID,
+		acetype.ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL,
+		acetype.ACE_TYPE_SYSTEM_ACCESS_FILTER:
 		lines = append(lines, describe.Nest(ace.Mask.DescribeList())...)
 		lines = append(lines, describe.Nest(ace.Identity.DescribeList())...)
 	}
