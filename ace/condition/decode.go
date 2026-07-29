@@ -191,7 +191,7 @@ func isBinaryOperator(tok byte) bool {
 	switch tok {
 	case tokenEqual, tokenNotEqual, tokenLessThan, tokenLessOrEqual, tokenGreaterThan,
 		tokenGreaterOrEqual, tokenContains, tokenAnyOf, tokenNotContains, tokenNotAnyOf,
-		tokenAnd, tokenOr:
+		tokenAnd, tokenOr, tokenBitwiseAnd:
 		return true
 	}
 	return false

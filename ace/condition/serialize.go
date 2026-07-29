@@ -100,7 +100,25 @@ func serializeBinary(v *BinaryOp, parentPrec int) string {
 		return left + " " + operatorNames[v.Op] + " " + right
 	}
 	// Relational operator: `LHS op RHS`.
-	return serializeNode(v.Left, 0) + " " + operatorNames[v.Op] + " " + serializeNode(v.Right, 0)
+	return relationalOperandText(v.Left) + " " + operatorNames[v.Op] + " " +
+		relationalOperandText(v.Right)
+}
+
+// relationalOperandText renders an operand of a binary relational operator,
+// parenthesizing a logical sub-expression.
+//
+// The text grammar never produces such a tree - a relational operator's operands
+// are attribute names and literals - but the binary form can encode one, because
+// postfix carries the structure explicitly. Windows' own parser can also build one
+// for '&' (token 0xa3), whose precedence of 10 places it below || and &&, so
+// "a & b || c" groups there as "a & (b || c)". Without the parentheses that tree
+// would serialize to text that re-parses differently, breaking the round-trip.
+func relationalOperandText(n Node) string {
+	text := serializeNode(n, 0)
+	if b, ok := n.(*BinaryOp); ok && (b.Op == tokenAnd || b.Op == tokenOr) {
+		return "(" + text + ")"
+	}
+	return text
 }
 
 func attributeText(a *Attribute) string {
