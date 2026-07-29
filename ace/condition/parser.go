@@ -217,7 +217,7 @@ func (p *parser) parseTerm() (Node, error) {
 	}
 
 	if t.kind == tkWord {
-		if op, ok := wordOperators[t.text]; ok {
+		if op, ok := lookupWordOperator(t.text); ok {
 			// Leading keyword operator: Member_of family or Exists/Not_Exists.
 			p.next()
 			if isMemberOfOperator(op) {
@@ -283,15 +283,11 @@ func (p *parser) peekRelationalOperator() (byte, bool) {
 		return 0, false
 	}
 	if t.kind == tkWord {
-		switch t.text {
-		case "Contains":
-			return tokenContains, true
-		case "Not_Contains":
-			return tokenNotContains, true
-		case "Any_of":
-			return tokenAnyOf, true
-		case "Not_Any_of":
-			return tokenNotAnyOf, true
+		// Only the binary keyword operators are valid in infix position; the
+		// Member_of family and Exists/Not_Exists are unary and handled by
+		// parseTerm.
+		if op, ok := lookupWordOperator(t.text); ok && isRelationalWordOperator(op) {
+			return op, true
 		}
 	}
 	return 0, false

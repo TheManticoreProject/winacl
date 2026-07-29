@@ -20,6 +20,7 @@ package condition
 
 import (
 	"fmt"
+	"strings"
 )
 
 // ACE_CONDITION_SIGNATURE marks a callback ACE's ApplicationData as a
@@ -92,7 +93,14 @@ const (
 	signNone     byte = 0x03
 )
 
-// wordOperators maps the SDDL keyword operators to their token byte-codes.
+// wordOperators maps the SDDL keyword operators to their token byte-codes, in the
+// capitalisation used by the MS-DTYP 2.4.4.17.6 and 2.4.4.17.7 tables.
+//
+// Look operators up with lookupWordOperator rather than indexing this map
+// directly: SDDL keyword operators are not case-sensitive, and more than one
+// capitalisation is in circulation. MS-DTYP spells the four "any" operators
+// Member_of_Any, while the operator-name tables in Windows' own sechost.dll and
+// advapi32.dll spell them Member_of_any.
 var wordOperators = map[string]byte{
 	"Contains":                 tokenContains,
 	"Not_Contains":             tokenNotContains,
@@ -110,8 +118,26 @@ var wordOperators = map[string]byte{
 	"Not_Exists":               tokenNotExists,
 }
 
+// wordOperatorsFolded is wordOperators re-keyed on the lowercased operator name,
+// so lookups can be case-insensitive without a linear scan.
+var wordOperatorsFolded = func() map[string]byte {
+	folded := make(map[string]byte, len(wordOperators))
+	for name, token := range wordOperators {
+		folded[strings.ToLower(name)] = token
+	}
+	return folded
+}()
+
+// lookupWordOperator resolves an SDDL keyword operator to its token byte-code,
+// ignoring case.
+func lookupWordOperator(name string) (byte, bool) {
+	token, ok := wordOperatorsFolded[strings.ToLower(name)]
+	return token, ok
+}
+
 // operatorNames is the reverse of wordOperators plus the symbolic operators,
-// used when serializing an AST back to SDDL text.
+// used when serializing an AST back to SDDL text. Serialization always emits the
+// MS-DTYP capitalisation.
 var operatorNames = map[byte]string{
 	tokenAnd:                  "&&",
 	tokenOr:                   "||",
@@ -136,6 +162,16 @@ var operatorNames = map[byte]string{
 	tokenNotDeviceMemberOfAny: "Not_Device_Member_of_Any",
 	tokenExists:               "Exists",
 	tokenNotExists:            "Not_Exists",
+}
+
+// isRelationalWordOperator reports whether tok is one of the keyword operators
+// that take a left- and a right-hand side, and so may appear in infix position.
+func isRelationalWordOperator(tok byte) bool {
+	switch tok {
+	case tokenContains, tokenNotContains, tokenAnyOf, tokenNotAnyOf:
+		return true
+	}
+	return false
 }
 
 func isMemberOfOperator(tok byte) bool {
