@@ -130,7 +130,7 @@ func decodeToken(data []byte) (Node, int, error) {
 		}
 		return &Composite{Items: items}, 5 + l, nil
 
-	case tokenLocalAttr, tokenUserAttr, tokenResourceAttr, tokenDeviceAttr:
+	case tokenLocalAttr, tokenUserAttr, tokenResourceAttr, tokenDeviceAttr, tokenTokenAttr:
 		s, n, err := decodeUTF16LenPrefixed(data[1:])
 		if err != nil {
 			return nil, 0, err

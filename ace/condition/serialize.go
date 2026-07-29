@@ -111,6 +111,8 @@ func attributeText(a *Attribute) string {
 		return "@Device." + a.Name
 	case tokenResourceAttr:
 		return "@Resource." + a.Name
+	case tokenTokenAttr:
+		return "@Token." + a.Name
 	default:
 		return a.Name
 	}

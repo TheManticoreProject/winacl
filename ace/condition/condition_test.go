@@ -218,3 +218,134 @@ func TestUnaryKeywordOperatorsRejectedInInfixPosition(t *testing.T) {
 		})
 	}
 }
+
+// TestTokenAttribute_0xfc covers the fifth attribute token, 0xfc, whose SDDL
+// prefix is "@TOKEN.". MS-DTYP 2.4.4.17.8 documents only 0xf8-0xfb and its
+// 2.5.1.1 ABNF admits only @user./@device./@resource., but Windows implements
+// 0xfc in both directions: sechost.dll and advapi32.dll parse "@TOKEN." into
+// 0xfc and render 0xfc back to "@TOKEN.", and the kernel evaluator gives it its
+// own attribute source class.
+//
+// Its wire encoding is identical to the other attribute tokens: the token byte,
+// a DWORD byte length, then the UTF-16 name.
+func TestTokenAttribute_0xfc(t *testing.T) {
+	// The token byte lands where the other attribute tokens do: straight after
+	// the 4-byte "artx" signature for a leading attribute operand.
+	raw, err := condition.Marshal(`(@TOKEN.foo == 1)`)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	if len(raw) < 5 {
+		t.Fatalf("encoded condition too short: %s", hex.EncodeToString(raw))
+	}
+	if raw[4] != 0xfc {
+		t.Fatalf("attribute token = 0x%02x, want 0xfc (encoded: %s)", raw[4], hex.EncodeToString(raw))
+	}
+
+	// Serialization uses this package's existing capitalisation convention,
+	// matching @User./@Device./@Resource. rather than Windows' all-caps form.
+	got, err := condition.Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	if got != `@Token.foo == 1` {
+		t.Fatalf("Unmarshal() = %q, want %q", got, `@Token.foo == 1`)
+	}
+}
+
+// TestTokenAttribute_PrefixIsCaseInsensitive checks that the @TOKEN. prefix folds
+// case like the three documented prefixes, and that every casing yields token 0xfc.
+func TestTokenAttribute_PrefixIsCaseInsensitive(t *testing.T) {
+	for _, expr := range []string{
+		`(@TOKEN.foo == 1)`, `(@token.foo == 1)`, `(@Token.foo == 1)`, `(@ToKeN.foo == 1)`,
+	} {
+		t.Run(expr, func(t *testing.T) {
+			raw, err := condition.Marshal(expr)
+			if err != nil {
+				t.Fatalf("Marshal(%q) error = %v", expr, err)
+			}
+			if raw[4] != 0xfc {
+				t.Fatalf("attribute token = 0x%02x, want 0xfc", raw[4])
+			}
+		})
+	}
+}
+
+// TestTokenAttribute_DecodeWindowsBlob decodes a hand-assembled payload of the
+// shape Windows produces — 0xfc, DWORD length, UTF-16 name — proving the decoder
+// no longer rejects the token. Before this was supported, Unmarshal failed with
+// "unknown conditional-expression token 0xfc".
+func TestTokenAttribute_DecodeWindowsBlob(t *testing.T) {
+	// artx | 0xfc len=6 "foo" | 0x04 int64(1) sign=none base=dec | 0x80 == | pad
+	blob, err := hex.DecodeString(
+		"61727478" + "fc06000000" + "66006f006f00" +
+			"04" + "0100000000000000" + "0302" + "80" + "00")
+	if err != nil {
+		t.Fatalf("bad test vector: %v", err)
+	}
+	got, err := condition.Unmarshal(blob)
+	if err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	if got != `@Token.foo == 1` {
+		t.Fatalf("Unmarshal() = %q, want %q", got, `@Token.foo == 1`)
+	}
+}
+
+// TestTokenAttribute_RoundTripStable checks Marshal -> Unmarshal -> Marshal is
+// byte-stable for 0xfc across operand positions and operator kinds, and that it
+// composes with the documented attribute tokens.
+func TestTokenAttribute_RoundTripStable(t *testing.T) {
+	for _, expr := range []string{
+		`(@Token.foo == 1)`,
+		`(@Token.dept == "eng")`,
+		`(@Token.a == @Token.b)`,
+		`(@Token.a Any_of {1, 2})`,
+		`(@Token.a && @User.b)`,
+		`(@Token.flags == 0x10)`,
+		`(Exists @Token.foo)`,
+	} {
+		t.Run(expr, func(t *testing.T) {
+			first, err := condition.Marshal(expr)
+			if err != nil {
+				t.Fatalf("Marshal(%q) error = %v", expr, err)
+			}
+			text, err := condition.Unmarshal(first)
+			if err != nil {
+				t.Fatalf("Unmarshal() error = %v", err)
+			}
+			second, err := condition.Marshal("(" + text + ")")
+			if err != nil {
+				t.Fatalf("re-Marshal(%q) error = %v", text, err)
+			}
+			if hex.EncodeToString(first) != hex.EncodeToString(second) {
+				t.Fatalf("round-trip not byte-stable:\n first  = %s\n second = %s",
+					hex.EncodeToString(first), hex.EncodeToString(second))
+			}
+		})
+	}
+}
+
+// TestTokenAttribute_NotAliasOfUserAttr guards against implementing @TOKEN. as a
+// synonym for @USER.. They are separate tokens with separate value sources: the
+// kernel evaluator reads 0xfc from the access token and 0xf9 from the user-claims
+// collection, and assigns them different internal source classes.
+func TestTokenAttribute_NotAliasOfUserAttr(t *testing.T) {
+	tokenRaw, err := condition.Marshal(`(@Token.foo == 1)`)
+	if err != nil {
+		t.Fatalf("Marshal(@Token.) error = %v", err)
+	}
+	userRaw, err := condition.Marshal(`(@User.foo == 1)`)
+	if err != nil {
+		t.Fatalf("Marshal(@User.) error = %v", err)
+	}
+	if tokenRaw[4] == userRaw[4] {
+		t.Fatalf("@Token. and @User. encoded to the same token 0x%02x; they must differ", tokenRaw[4])
+	}
+	if userRaw[4] != 0xf9 {
+		t.Fatalf("@User. token = 0x%02x, want 0xf9", userRaw[4])
+	}
+	if text, _ := condition.Unmarshal(userRaw); text != `@User.foo == 1` {
+		t.Fatalf("@User. round-trip = %q, want %q", text, `@User.foo == 1`)
+	}
+}
