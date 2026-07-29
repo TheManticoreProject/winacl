@@ -349,3 +349,140 @@ func TestTokenAttribute_NotAliasOfUserAttr(t *testing.T) {
 		t.Fatalf("@User. round-trip = %q, want %q", text, `@User.foo == 1`)
 	}
 }
+
+// TestBitwiseAnd_0xa3 covers the undocumented '&' operator, token 0xa3. Neither
+// MS-DTYP's relational table (2.4.4.17.6, which stops at 0x93) nor its logical
+// table (2.4.4.17.7, which defines only 0xa0/0xa1/0xa2) lists it, and the 2.5.1.1
+// ABNF has "&&" but never a lone "&". Windows implements it in all three copies of
+// the operator table (sechost.dll, advapi32.dll, ntoskrnl.exe) and the kernel
+// evaluator computes a bitwise AND of two 64-bit integers, TRUE when non-zero.
+func TestBitwiseAnd_0xa3(t *testing.T) {
+	raw, err := condition.Marshal(`(@User.flags & 4)`)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	// Postfix: the operator is the last non-padding byte.
+	end := len(raw)
+	for end > 0 && raw[end-1] == 0x00 {
+		end--
+	}
+	if end == 0 || raw[end-1] != 0xa3 {
+		t.Fatalf("trailing operator byte = 0x%02x, want 0xa3 (encoded: %s)",
+			raw[end-1], hex.EncodeToString(raw))
+	}
+	got, err := condition.Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	if got != `@User.flags & 4` {
+		t.Fatalf("Unmarshal() = %q, want %q", got, `@User.flags & 4`)
+	}
+}
+
+// TestBitwiseAnd_FlagTestForms exercises the operand shapes '&' actually takes: a
+// value-bearing left side with a literal or attribute on the right. These are the
+// forms a flag test uses, and the reason '&' is parsed as a binary relational
+// operator rather than alongside && and ||.
+func TestBitwiseAnd_FlagTestForms(t *testing.T) {
+	for _, expr := range []string{
+		`(@User.a & 1)`,
+		`(@Resource.flags & 4)`,
+		`(@User.flags & 0x10)`,
+		`(@User.a & @User.b)`,
+		`(flags & 3)`,
+		// Both undocumented constructs in one expression: the 0xfc attribute
+		// token as the left operand of the 0xa3 operator.
+		`(@Token.flags & 8)`,
+	} {
+		t.Run(expr, func(t *testing.T) {
+			first, err := condition.Marshal(expr)
+			if err != nil {
+				t.Fatalf("Marshal(%q) error = %v", expr, err)
+			}
+			text, err := condition.Unmarshal(first)
+			if err != nil {
+				t.Fatalf("Unmarshal() error = %v", err)
+			}
+			second, err := condition.Marshal("(" + text + ")")
+			if err != nil {
+				t.Fatalf("re-Marshal(%q) error = %v", text, err)
+			}
+			if hex.EncodeToString(first) != hex.EncodeToString(second) {
+				t.Fatalf("round-trip not byte-stable:\n first  = %s\n second = %s",
+					hex.EncodeToString(first), hex.EncodeToString(second))
+			}
+		})
+	}
+}
+
+// TestBitwiseAnd_LogicalOperandRoundTrips is the regression test for the tree
+// Windows' own parser can build but this package's text grammar does not produce.
+// Because '&' has precedence 10 there — below || (11) and && (12) — Windows groups
+// "a & b || c" as "a & (b || c)", giving a '&' whose right operand is a logical
+// expression. The binary form encodes that unambiguously in postfix, so decoding
+// must yield parenthesized text that re-encodes to the identical bytes.
+func TestBitwiseAnd_LogicalOperandRoundTrips(t *testing.T) {
+	// artx | @User.a | @User.b | @User.c | 0xa1 (||) | 0xa3 (&) | pad
+	blob, err := hex.DecodeString(
+		"61727478" +
+			"f902000000" + "6100" +
+			"f902000000" + "6200" +
+			"f902000000" + "6300" +
+			"a1" + "a3" + "00")
+	if err != nil {
+		t.Fatalf("bad test vector: %v", err)
+	}
+	text, err := condition.Unmarshal(blob)
+	if err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	const want = `@User.a & (@User.b || @User.c)`
+	if text != want {
+		t.Fatalf("Unmarshal() = %q, want %q", text, want)
+	}
+	again, err := condition.Marshal("(" + text + ")")
+	if err != nil {
+		t.Fatalf("re-Marshal(%q) error = %v", text, err)
+	}
+	if hex.EncodeToString(again) != hex.EncodeToString(blob) {
+		t.Fatalf("re-encode differs:\n want = %s\n got  = %s",
+			hex.EncodeToString(blob), hex.EncodeToString(again))
+	}
+}
+
+// TestBitwiseAnd_DoesNotShadowLogicalAnd checks the lexer still matches "&&"
+// before a lone "&", so logical AND keeps token 0xa0.
+func TestBitwiseAnd_DoesNotShadowLogicalAnd(t *testing.T) {
+	andRaw, err := condition.Marshal(`(@User.a == 1 && @User.b == 2)`)
+	if err != nil {
+		t.Fatalf("Marshal(&&) error = %v", err)
+	}
+	if got, _ := condition.Unmarshal(andRaw); got != `@User.a == 1 && @User.b == 2` {
+		t.Fatalf("&& round-trip = %q", got)
+	}
+	if !strings.Contains(hex.EncodeToString(andRaw), "a0") {
+		t.Fatalf("logical AND did not encode token 0xa0: %s", hex.EncodeToString(andRaw))
+	}
+	// A lone '&' must not be accepted where a logical operand is required, since
+	// its operands are values.
+	if _, err := condition.Marshal(`(Member_of {SID(BA)} & Member_of {SID(WD)})`); err == nil {
+		t.Fatal("expected an error for '&' applied to Member_of results (not integer operands)")
+	}
+}
+
+// TestBitwiseAnd_ParenthesizedRHSOnlyForBitwiseAnd pins that the widened
+// right-hand-side grammar is scoped to '&' and does not leak to the other
+// relational operators.
+func TestBitwiseAnd_ParenthesizedRHSOnlyForBitwiseAnd(t *testing.T) {
+	if _, err := condition.Marshal(`(@User.a & (@User.b || @User.c))`); err != nil {
+		t.Fatalf("'&' with a parenthesized RHS should parse, got %v", err)
+	}
+	for _, expr := range []string{
+		`(@User.a == (@User.b || @User.c))`,
+		`(@User.a < (@User.b && @User.c))`,
+	} {
+		if _, err := condition.Marshal(expr); err == nil {
+			t.Errorf("%q should not parse: only '&' accepts a parenthesized RHS", expr)
+		}
+	}
+}

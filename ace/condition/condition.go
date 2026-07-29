@@ -84,6 +84,27 @@ const (
 	// Binary logical operators.
 	tokenAnd byte = 0xa0
 	tokenOr  byte = 0xa1
+
+	// tokenBitwiseAnd is an operator that Windows implements but MS-DTYP does not
+	// document: neither the relational table (2.4.4.17.6, which stops at 0x93) nor
+	// the logical table (2.4.4.17.7, which defines only 0xa0/0xa1/0xa2) lists it,
+	// and the 2.5.1.1 ABNF has "&&" but never a lone "&".
+	//
+	// It is a bitwise AND of two 64-bit integer operands, evaluating TRUE when the
+	// result is non-zero, so it reads as a flag test: (@Resource.flags & 4).
+	//
+	// It is parsed here as a binary relational operator, because that is what its
+	// operands are: a value-bearing left side and a literal or attribute on the
+	// right, the same shape as ==. Note one deliberate divergence from Windows in
+	// the text grammar: Windows' operator table gives '&' precedence 10, the lowest
+	// of all the binary operators (|| is 11, && is 12), so Windows groups
+	// "a & b || c" as "a & (b || c)". This package groups it as "(a & b) || c",
+	// like every other relational operator. The Windows grouping is ill-typed by
+	// '&'s own operand rules - the right side would be a logical result rather than
+	// an integer - so it cannot evaluate to TRUE, and no meaningful descriptor
+	// depends on it. Parenthesize explicitly if the exact Windows tree is required;
+	// the binary form round-trips either tree faithfully.
+	tokenBitwiseAnd byte = 0xa3
 )
 
 // Base codes for integer literals (MS-DTYP 2.4.4.17.5).
@@ -148,6 +169,7 @@ func lookupWordOperator(name string) (byte, bool) {
 var operatorNames = map[byte]string{
 	tokenAnd:                  "&&",
 	tokenOr:                   "||",
+	tokenBitwiseAnd:           "&",
 	tokenNot:                  "!",
 	tokenEqual:                "==",
 	tokenNotEqual:             "!=",

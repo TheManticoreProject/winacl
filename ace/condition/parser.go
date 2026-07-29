@@ -116,6 +116,10 @@ func lexSymbolOperator(s string) (string, int, error) {
 		return ">", 1, nil
 	case s[0] == '!':
 		return "!", 1, nil
+	case s[0] == '&':
+		// A lone '&' is the undocumented bitwise-AND operator (token 0xa3). The
+		// "&&" case above is matched first, so this cannot shadow logical AND.
+		return "&", 1, nil
 	}
 	return "", 0, fmt.Errorf("invalid operator near %q", s)
 }
@@ -251,7 +255,7 @@ func (p *parser) parseTerm() (Node, error) {
 		return lhs, nil
 	}
 	p.consumeRelationalOperator()
-	rhs, err := p.parseRHS()
+	rhs, err := p.parseRHS(op)
 	if err != nil {
 		return nil, err
 	}
@@ -279,6 +283,11 @@ func (p *parser) peekRelationalOperator() (byte, bool) {
 			return tokenGreaterThan, true
 		case ">=":
 			return tokenGreaterOrEqual, true
+		case "&":
+			// Undocumented bitwise-AND operator (token 0xa3). It takes value
+			// operands like the other binary relational operators, not the
+			// expression operands that && and || take.
+			return tokenBitwiseAnd, true
 		}
 		return 0, false
 	}
@@ -297,10 +306,27 @@ func (p *parser) consumeRelationalOperator() { p.next() }
 
 // parseRHS parses the right-hand side of a binary relational operator: an
 // @Prefixed attribute, a value-array ("{a,b}"), or a single value.
-func (p *parser) parseRHS() (Node, error) {
+func (p *parser) parseRHS(op byte) (Node, error) {
 	t := p.peek()
 	if p.atEnd() {
 		return nil, fmt.Errorf("expected right-hand-side operand")
+	}
+	// Only '&' accepts a parenthesized sub-expression here. Windows' operator table
+	// gives it precedence 10, below || and &&, so Windows' own parser can build a
+	// '&' whose right side is a logical expression; accepting the parenthesized form
+	// is what lets such a tree survive a binary -> text -> binary round-trip. The
+	// other relational operators keep the narrower grammar.
+	if op == tokenBitwiseAnd && p.isSymbol("(") {
+		p.next()
+		node, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		if !p.isSymbol(")") {
+			return nil, fmt.Errorf("expected ')' to close parenthesized right-hand side")
+		}
+		p.next()
+		return node, nil
 	}
 	if t.kind == tkWord && strings.HasPrefix(t.text, "@") {
 		return p.parseAttribute()
